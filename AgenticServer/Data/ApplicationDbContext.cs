@@ -75,6 +75,9 @@ namespace AgenticServer.Data
                 .HasMaxLength(3072);
 
             modelBuilder.Entity<Message>()
+                .HasIndex(m => new { m.RoomId, m.Timestamp });
+
+            modelBuilder.Entity<Message>()
                 .HasOne(m => m.Sender)
                 .WithMany()
                 .HasForeignKey(m => m.SenderId)
