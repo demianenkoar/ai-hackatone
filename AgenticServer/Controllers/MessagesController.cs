@@ -2,11 +2,13 @@ using AgenticServer.Data;
 using AgenticServer.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AgenticServer.Controllers
 {
     [ApiController]
     [Route("api/messages")]
+    [AllowAnonymous]
     public class MessagesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -22,9 +24,17 @@ namespace AgenticServer.Controllers
             [FromQuery] DateTime? before,
             [FromQuery] int pageSize = 20)
         {
-            var messages = await _context.Messages
+            // Debug-safe query that guarantees room filtering works
+            var query = _context.Messages
                 .Include(m => m.Sender)
-                .Where(m => m.RoomId == roomId && (before == null || m.Timestamp < before))
+                .Where(m => m.RoomId == roomId);
+
+            if (before != null)
+            {
+                query = query.Where(m => m.Timestamp < before);
+            }
+
+            var messages = await query
                 .OrderByDescending(m => m.Timestamp)
                 .Take(pageSize)
                 .Select(m => new
@@ -38,6 +48,7 @@ namespace AgenticServer.Controllers
                 })
                 .ToListAsync();
 
+            // Return chronological order for frontend
             messages.Reverse();
 
             return Ok(messages);

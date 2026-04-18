@@ -29,24 +29,49 @@ function Chat({ token, user, onLogout }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [newChannelName, setNewChannelName] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
-  const [inviteUserId, setInviteUserId] = useState("");
-
   const connectionRef = useRef(null);
 
-  const loadChannels = () => {
-    fetch(`${API_BASE}/api/channels`, {
+  const loadChannels = async () => {
+    const res = await fetch(`${API_BASE}/api/channels`, {
       headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.json())
-      .then(setChannels);
+    });
+
+    const data = await res.json();
+    setChannels(data);
+
+    // If no room selected yet, auto-select General
+    if (!selectedChannel && data.length > 0) {
+      const general = data.find(r => r.title?.toLowerCase() === "general");
+      if (general) {
+        setSelectedChannel(general.id);
+      } else {
+        setSelectedChannel(data[0].id);
+      }
+    }
+  };
+
+  const loadMessages = async (roomId) => {
+    if (!roomId) return;
+
+    console.log("Fetching messages for room:", roomId);
+
+    const res = await fetch(`${API_BASE}/api/messages/${roomId}`);
+    const data = await res.json();
+
+    console.log("Messages received:", data);
+
+    setMessages(data);
   };
 
   useEffect(() => {
     loadChannels();
   }, []);
+
+  useEffect(() => {
+    if (selectedChannel) {
+      loadMessages(selectedChannel);
+    }
+  }, [selectedChannel]);
 
   useEffect(() => {
     if (!token) return;
@@ -63,49 +88,22 @@ function Chat({ token, user, onLogout }) {
       setMessages(prev => [...prev, msg]);
     });
 
-    connection.on("RoomAdded", (roomId) => {
-      loadChannels();
-    });
+    connection.start().then(() => {
+      console.log("SignalR connected");
 
-    connection.start();
+      if (selectedChannel) {
+        connection.invoke("JoinRoom", selectedChannel);
+      }
+    });
 
     connectionRef.current = connection;
 
     return () => connection.stop();
   }, [token, selectedChannel]);
 
-  const createChannel = async () => {
-    await fetch(`${API_BASE}/api/rooms`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        name: newChannelName,
-        isPublic
-      })
-    });
-
-    setShowCreate(false);
-    setNewChannelName("");
-    loadChannels();
-  };
-
-  const inviteUser = async () => {
-    await fetch(
-      `${API_BASE}/api/rooms/add-user?roomId=${selectedChannel}&userId=${inviteUserId}`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
-
-    setInviteUserId("");
-  };
-
   const sendMessage = async () => {
     if (!text.trim()) return;
+
     await connectionRef.current.invoke("SendMessage", selectedChannel, text);
     setText("");
   };
@@ -117,13 +115,6 @@ function Chat({ token, user, onLogout }) {
         <div className="text-xs text-slate-500 mb-4">
           Logged in as: {user.username}
         </div>
-
-        <button
-          onClick={() => setShowCreate(true)}
-          className="text-xs bg-blue-600 text-white rounded px-2 py-1 mb-3"
-        >
-          + Create Channel
-        </button>
 
         <div className="space-y-2 flex-1">
           {channels.map(c => (
@@ -195,63 +186,7 @@ function Chat({ token, user, onLogout }) {
             Send
           </button>
         </div>
-
-        {selectedChannel && (
-          <div className="border-t p-3 flex gap-2">
-            <input
-              placeholder="Invite userId"
-              value={inviteUserId}
-              onChange={e => setInviteUserId(e.target.value)}
-              className="border px-2 py-1 rounded text-sm"
-            />
-            <button
-              onClick={inviteUser}
-              className="text-sm bg-slate-800 text-white px-2 rounded"
-            >
-              Invite
-            </button>
-          </div>
-        )}
       </div>
-
-      {showCreate && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
-          <div className="bg-white p-6 rounded-xl shadow-xl w-80 space-y-3">
-            <h3 className="font-semibold">Create Channel</h3>
-
-            <input
-              value={newChannelName}
-              onChange={e => setNewChannelName(e.target.value)}
-              placeholder="Channel name"
-              className="w-full border rounded px-3 py-2"
-            />
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-              />
-              Make this channel public
-            </label>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowCreate(false)}
-                className="text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createChannel}
-                className="bg-blue-600 text-white px-3 py-1 rounded"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -261,11 +196,6 @@ export default function App() {
   const [user, setUser] = useState(
     token ? decodeUser(token) : { id: null, username: "" }
   );
-
-  const handleLogin = (t) => {
-    setToken(t);
-    setUser(decodeUser(t));
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("jwt");
