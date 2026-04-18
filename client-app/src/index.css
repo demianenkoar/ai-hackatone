@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.avatar {
+  @apply w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold;
+  background-color: #6264a7;
+}
+
+.message-card {
+  border: 1px solid #e1dfdd;
+}
+
+.teams-header {
+  background-color: #6264a7;
+  color: white;
+}
+
+.channel-active {
+  border-left: 4px solid #6264a7;
+}

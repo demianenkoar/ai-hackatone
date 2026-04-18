@@ -92,28 +92,37 @@ export default function MessageList({ roomId }) {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        style={{
-          height: "400px",
-          overflowY: "scroll",
-          border: "1px solid #ccc",
-          padding: "10px",
-          marginBottom: "10px"
-        }}
+        className="h-[400px] overflow-y-scroll border border-[#e1dfdd] p-4 mb-3 bg-[#f3f2f1]"
       >
         {messages.map(m => (
-          <div key={m.id}>
-            <strong>{m.senderId}</strong>: {m.content}
+          <div key={m.id} className="flex gap-3 mb-3">
+            <div className="avatar">
+              {m.senderId ? String(m.senderId)[0].toUpperCase() : "U"}
+            </div>
+
+            <div className="bg-white border border-[#e1dfdd] rounded px-3 py-2">
+              <div className="text-xs text-gray-500 mb-1">
+                <strong>{m.senderId}</strong>
+              </div>
+              {m.content}
+            </div>
           </div>
         ))}
       </div>
 
-      <form onSubmit={sendMessage}>
+      <form onSubmit={sendMessage} className="flex gap-2">
         <input
           name="message"
           placeholder="Type message..."
-          style={{ width: "80%" }}
+          className="flex-1 border rounded px-3 py-2"
         />
-        <button type="submit">Send</button>
+        <button
+          type="submit"
+          className="text-white px-4 rounded"
+          style={{ backgroundColor: "#6264a7" }}
+        >
+          Send
+        </button>
       </form>
     </div>
   );

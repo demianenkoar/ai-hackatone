@@ -98,7 +98,7 @@ function AuthPage({ setToken }) {
 
   return (
     <div className="w-full h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white p-8 rounded shadow w-80">
+      <div className="bg-white p-8 rounded shadow w-80 border border-[#e1dfdd]">
         <h2 className="text-xl font-semibold mb-4">
           {mode === "login" ? "Login" : "Register"}
         </h2>
@@ -121,14 +121,16 @@ function AuthPage({ setToken }) {
         {mode === "login" ? (
           <button
             onClick={login}
-            className="w-full bg-blue-600 text-white py-2 rounded"
+            className="w-full text-white py-2 rounded"
+            style={{ backgroundColor: "#6264a7" }}
           >
             Login
           </button>
         ) : (
           <button
             onClick={register}
-            className="w-full bg-blue-600 text-white py-2 rounded"
+            className="w-full text-white py-2 rounded"
+            style={{ backgroundColor: "#6264a7" }}
           >
             Register
           </button>
@@ -139,7 +141,7 @@ function AuthPage({ setToken }) {
             <span>
               No account?{" "}
               <button
-                className="text-blue-600"
+                className="text-[#6264a7]"
                 onClick={() => setMode("register")}
               >
                 Register
@@ -149,7 +151,7 @@ function AuthPage({ setToken }) {
             <span>
               Already have an account?{" "}
               <button
-                className="text-blue-600"
+                className="text-[#6264a7]"
                 onClick={() => setMode("login")}
               >
                 Login
@@ -434,24 +436,26 @@ function Chat({ token, user, onLogout }) {
       <div
         key={c.id}
         onClick={() => setCurrentRoomId(c.id)}
-        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-all duration-200
-        ${active ? "bg-blue-600 text-white" : "hover:bg-gray-200"}`}
+        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-all
+        ${active ? "bg-white channel-active" : "hover:bg-gray-200"}`}
       >
-        {active && <span className="w-2 h-2 bg-white rounded-full"></span>}
         <span>{c.name ?? c.title}</span>
       </div>
     );
   };
 
   return (
-    <div className="w-full h-screen flex overflow-hidden">
+    <div className="w-full h-screen flex overflow-hidden bg-white">
 
-      <div className="w-64 bg-slate-100 border-r p-4 flex flex-col">
+      <div className="w-16 bg-[#2b2b2b]"></div>
+
+      <div className="w-64 bg-[#f3f2f1] border-r p-4 flex flex-col">
         <div className="flex justify-between items-center mb-2">
           <div className="font-semibold">Channels</div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+            className="text-xs text-white px-2 py-1 rounded"
+            style={{ backgroundColor: "#6264a7" }}
           >
             +
           </button>
@@ -472,36 +476,36 @@ function Chat({ token, user, onLogout }) {
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="border-b p-3 font-semibold">
+      <div className="flex-1 flex flex-col">
+
+        <div className="teams-header p-3 font-semibold">
           Chat
         </div>
 
         <div
           ref={containerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+          className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]"
         >
           {messages.map(msg => {
             const mine = msg.senderId === user.id;
             const time = formatTimestamp(msg.timestamp);
 
             return (
-              <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div className={mine
-                  ? "bg-blue-600 text-white px-4 py-2 rounded-xl max-w-xs"
-                  : "bg-slate-200 px-4 py-2 rounded-xl max-w-xs"}>
-                  {!mine && (
-                    <div className="text-xs text-slate-600">
+              <div key={msg.id} className="flex gap-3">
+                <div className="avatar">
+                  {msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "U"}
+                </div>
+
+                <div className="bg-white message-card rounded px-4 py-2 max-w-xl w-full">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span className="font-semibold text-gray-700">
                       {msg.senderName}
-                    </div>
-                  )}
-
-                  <div>{msg.content}</div>
-
-                  <div className="text-xs text-gray-500 text-right mt-1">
-                    {time}
+                    </span>
+                    <span>{time}</span>
                   </div>
+
+                  <div className="text-sm">{msg.content}</div>
                 </div>
               </div>
             );
@@ -509,16 +513,18 @@ function Chat({ token, user, onLogout }) {
           <div ref={messagesEndRef}></div>
         </div>
 
-        <div className="border-t p-3 flex gap-2">
+        <div className="border-t bg-white p-3 flex gap-2">
           <input
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             className="flex-1 border rounded px-3 py-2"
+            placeholder="Type a message"
           />
           <button
             onClick={sendMessage}
-            className="bg-blue-600 text-white px-4 rounded"
+            className="text-white px-4 rounded"
+            style={{ backgroundColor: "#6264a7" }}
           >
             Send
           </button>
@@ -526,13 +532,14 @@ function Chat({ token, user, onLogout }) {
       </div>
 
       {isPrivateRoom && (
-        <div className="w-64 border-l bg-slate-50 p-4">
+        <div className="w-64 border-l bg-[#f3f2f1] p-4">
           <div className="flex justify-between items-center mb-3">
             <div className="font-semibold">Members</div>
 
             <button
               onClick={() => setShowInviteModal(true)}
-              className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+              className="text-xs text-white px-2 py-1 rounded"
+              style={{ backgroundColor: "#6264a7" }}
             >
               Invite
             </button>
@@ -540,88 +547,13 @@ function Chat({ token, user, onLogout }) {
 
           <div className="space-y-2">
             {members?.map(m => (
-              <div key={m?.userId} className="text-sm">
+              <div key={m?.userId} className="flex items-center gap-2 text-sm">
+                <div className="avatar">
+                  {m?.username ? m.username.charAt(0).toUpperCase() : "U"}
+                </div>
                 {m?.username}
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-80">
-            <h2 className="font-semibold mb-3">Invite User</h2>
-
-            <input
-              value={searchQuery}
-              onChange={(e) => searchUsers(e.target.value)}
-              placeholder="Search username..."
-              className="w-full border px-3 py-2 rounded mb-3"
-            />
-
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {searchResults?.map(u => (
-                <div key={u?.id} className="flex justify-between">
-                  <span>{u?.username}</span>
-                  <button
-                    onClick={() => inviteUser(u?.id)}
-                    className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
-                  >
-                    Invite
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-80">
-            <h2 className="font-semibold mb-4">Create Channel</h2>
-
-            <input
-              value={newRoomName}
-              onChange={(e) => setNewRoomName(e.target.value)}
-              placeholder="Channel name"
-              className="w-full border px-3 py-2 rounded mb-3"
-            />
-
-            <label className="flex items-center gap-2 mb-4 text-sm">
-              <input
-                type="checkbox"
-                checked={!isPublic}
-                onChange={(e) => setIsPublic(!e.target.checked)}
-              />
-              Private Channel
-            </label>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-sm"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={createRoom}
-                className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
-              >
-                Create
-              </button>
-            </div>
           </div>
         </div>
       )}
