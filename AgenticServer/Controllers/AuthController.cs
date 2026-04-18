@@ -21,6 +21,7 @@ namespace AgenticServer.Controllers
     {
         public string Email { get; set; }
         public string Password { get; set; }
+        public string Username { get; set; }
     }
 
     [ApiController]
@@ -51,16 +52,33 @@ namespace AgenticServer.Controllers
 
             var normalizedEmail = input.Email.Trim().ToLower();
 
-            if (await _db.Users.AnyAsync(x => x.Username.ToLower() == normalizedEmail))
+            if (!normalizedEmail.Contains("@"))
             {
-                _logger.LogWarning("Registration attempt with existing email: {Email}", normalizedEmail);
-                return BadRequest("User already exists");
+                return BadRequest("Invalid email");
+            }
+
+            var baseUsername = input.Username;
+
+            if (string.IsNullOrWhiteSpace(baseUsername))
+            {
+                baseUsername = normalizedEmail.Split("@")[0];
+            }
+
+            baseUsername = baseUsername.Trim().ToLower();
+
+            var username = baseUsername;
+
+            var random = new Random();
+
+            while (await _db.Users.AnyAsync(x => x.Username.ToLower() == username))
+            {
+                username = $"{baseUsername}_{random.Next(100, 999)}";
             }
 
             var user = new User
             {
                 Id = Guid.NewGuid(),
-                Username = normalizedEmail,
+                Username = username,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -69,7 +87,7 @@ namespace AgenticServer.Controllers
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            _logger.LogInformation("User registered successfully: {Email}", normalizedEmail);
+            _logger.LogInformation("User registered successfully: {Email} -> Username: {Username}", normalizedEmail, username);
 
             return Ok();
         }
@@ -87,7 +105,7 @@ namespace AgenticServer.Controllers
 
             _logger.LogInformation("Attempting login for: {Email}", normalizedEmail);
 
-            var user = await _db.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == normalizedEmail);
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == normalizedEmail || x.Username.ToLower().StartsWith(normalizedEmail.Split("@")[0]));
 
             if (user == null)
             {

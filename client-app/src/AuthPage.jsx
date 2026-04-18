@@ -62,6 +62,13 @@ export default function AuthPage({ setToken }) {
       return;
     }
 
+    if (!normalizedEmail.includes("@")) {
+      setMessage("Invalid email address");
+      return;
+    }
+
+    const derivedUsername = normalizedEmail.split("@")[0];
+
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: {
@@ -69,7 +76,8 @@ export default function AuthPage({ setToken }) {
       },
       body: JSON.stringify({
         email: normalizedEmail,
-        password: password
+        password: password,
+        username: derivedUsername
       })
     });
 
