@@ -14,10 +14,11 @@ export default function ChatArea({
 
   const { channelId } = useParams();
 
+  const safeMessages = messages || [];
+
   console.log("Active channel:", channelId);
   console.log("Messages in ChatArea:", messages);
-
-  const safeMessages = messages || [];
+  console.log("Rendering messages:", safeMessages.length);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -26,7 +27,7 @@ export default function ChatArea({
 
     async function fetchMessages() {
       try {
-        const res = await fetch(`/api/messages/${channelId}?limit=20`, {
+        const res = await fetch(`/api/messages/${channelId}?limit=20&t=${Date.now()}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -38,13 +39,12 @@ export default function ChatArea({
         }
 
         const data = await res.json();
-        setMessages(data || []);
+        setMessages(data);
       } catch (err) {
         console.error("Failed to fetch messages:", err);
       }
     }
 
-    // clear old messages immediately when switching channels
     setMessages([]);
 
     fetchMessages();
