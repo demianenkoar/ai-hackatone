@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
-const PAGE_SIZE = 20;
 
 function decodeUser(token) {
   try {
@@ -25,208 +24,29 @@ function decodeUser(token) {
   }
 }
 
-function formatTime(ts) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  });
-}
-
-function AuthForm({ onLogin }) {
-  const [mode, setMode] = useState("login");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    try {
-      if (mode === "register") {
-        const res = await fetch(`${API_BASE}/api/auth/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            passwordHash: password,
-            email: `${username}@local`
-          })
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "Registration failed");
-        }
-
-        setMode("login");
-        return;
-      }
-
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          passwordHash: password
-        })
-      });
-
-      if (!res.ok) {
-        throw new Error("Invalid credentials");
-      }
-
-      const data = await res.json();
-      localStorage.setItem("jwt", data.token);
-      onLogin(data.token);
-
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  return (
-    <div className="h-screen flex items-center justify-center bg-slate-100">
-      <form
-        onSubmit={submit}
-        className="bg-white p-8 rounded-xl shadow-xl w-80 space-y-4"
-      >
-        <h2 className="text-xl font-semibold text-center">
-          {mode === "login" ? "Login" : "Create Account"}
-        </h2>
-
-        <input
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-        />
-
-        <input
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-
-        {error && (
-          <div className="text-red-500 text-sm">{error}</div>
-        )}
-
-        <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-          {mode === "login" ? "Login" : "Register"}
-        </button>
-
-        <div className="text-sm text-center">
-          {mode === "login" ? (
-            <>
-              No account?{" "}
-              <span
-                className="text-blue-600 cursor-pointer"
-                onClick={() => setMode("register")}
-              >
-                Register
-              </span>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <span
-                className="text-blue-600 cursor-pointer"
-                onClick={() => setMode("login")}
-              >
-                Login
-              </span>
-            </>
-          )}
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function Chat({ token, currentUserId, currentUsername, onLogout }) {
+function Chat({ token, user, onLogout }) {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-  const [typingUser, setTypingUser] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
+  const [inviteUserId, setInviteUserId] = useState("");
 
   const connectionRef = useRef(null);
-  const containerRef = useRef(null);
-  const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
+
+  const loadChannels = () => {
+    fetch(`${API_BASE}/api/channels`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(setChannels);
+  };
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/channels`)
-      .then(r => r.json())
-      .then(data => {
-        setChannels(data);
-        if (data.length > 0) setSelectedChannel(data[0].id);
-      });
+    loadChannels();
   }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const loadMoreMessages = async () => {
-    if (!hasMore || loadingMore || messages.length === 0) return;
-
-    setLoadingMore(true);
-
-    const oldest = messages[0];
-    const container = containerRef.current;
-    const previousHeight = container.scrollHeight;
-
-    const res = await fetch(
-      `${API_BASE}/api/messages/${selectedChannel}?before=${encodeURIComponent(
-        oldest.timestamp
-      )}&pageSize=${PAGE_SIZE}`
-    );
-
-    const olderMessages = await res.json();
-
-    if (olderMessages.length < PAGE_SIZE) {
-      setHasMore(false);
-    }
-
-    setMessages(prev => [...olderMessages, ...prev]);
-
-    setTimeout(() => {
-      const newHeight = container.scrollHeight;
-      container.scrollTop = newHeight - previousHeight;
-    }, 0);
-
-    setLoadingMore(false);
-  };
-
-  const handleScroll = () => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (container.scrollTop === 0) {
-      loadMoreMessages();
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedChannel) return;
-
-    setHasMore(true);
-
-    fetch(`${API_BASE}/api/messages/${selectedChannel}?pageSize=${PAGE_SIZE}`)
-      .then(r => r.json())
-      .then(data => {
-        setMessages(data);
-      });
-
-  }, [selectedChannel]);
 
   useEffect(() => {
     if (!token) return;
@@ -243,63 +63,67 @@ function Chat({ token, currentUserId, currentUsername, onLogout }) {
       setMessages(prev => [...prev, msg]);
     });
 
-    connection.on("UserTyping", (username, isTyping) => {
-      if (isTyping) {
-        setTypingUser(username);
-      } else {
-        setTypingUser(null);
-      }
+    connection.on("RoomAdded", (roomId) => {
+      loadChannels();
     });
 
-    connection.start().then(() => {
-      if (selectedChannel) {
-        connection.invoke("JoinRoom", selectedChannel);
-      }
-    });
+    connection.start();
 
     connectionRef.current = connection;
 
-    return () => {
-      connection.stop();
-    };
+    return () => connection.stop();
   }, [token, selectedChannel]);
 
-  const handleTyping = (value) => {
-    setText(value);
+  const createChannel = async () => {
+    await fetch(`${API_BASE}/api/rooms`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name: newChannelName,
+        isPublic
+      })
+    });
 
-    const connection = connectionRef.current;
-    if (!connection || !selectedChannel) return;
+    setShowCreate(false);
+    setNewChannelName("");
+    loadChannels();
+  };
 
-    connection.invoke("SendTypingNotification", selectedChannel.toString(), true);
+  const inviteUser = async () => {
+    await fetch(
+      `${API_BASE}/api/rooms/add-user?roomId=${selectedChannel}&userId=${inviteUserId}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      connection.invoke("SendTypingNotification", selectedChannel.toString(), false);
-    }, 3000);
+    setInviteUserId("");
   };
 
   const sendMessage = async () => {
-    const connection = connectionRef.current;
-    if (!connection || !text.trim()) return;
-
-    await connection.invoke("SendMessage", selectedChannel, text);
+    if (!text.trim()) return;
+    await connectionRef.current.invoke("SendMessage", selectedChannel, text);
     setText("");
-
-    connection.invoke("SendTypingNotification", selectedChannel.toString(), false);
   };
 
   return (
     <div className="w-full h-screen flex overflow-hidden">
       <div className="w-64 bg-slate-100 border-r border-slate-200 p-4 flex flex-col">
-        <div className="mb-4">
-          <div className="font-semibold">Channels</div>
-          <div className="text-xs text-slate-500">
-            Logged in as: {currentUsername}
-          </div>
+        <div className="font-semibold mb-1">Channels</div>
+        <div className="text-xs text-slate-500 mb-4">
+          Logged in as: {user.username}
         </div>
+
+        <button
+          onClick={() => setShowCreate(true)}
+          className="text-xs bg-blue-600 text-white rounded px-2 py-1 mb-3"
+        >
+          + Create Channel
+        </button>
 
         <div className="space-y-2 flex-1">
           {channels.map(c => (
@@ -326,69 +150,108 @@ function Chat({ token, currentUserId, currentUsername, onLogout }) {
       </div>
 
       <div className="flex-1 flex flex-col bg-white">
-        <div
-          id="message-container"
-          ref={containerRef}
-          onScroll={handleScroll}
-          className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4"
-        >
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map(msg => {
-            const mine = msg.senderId === currentUserId;
+            const mine = msg.senderId === user.id;
 
             return (
-              <div key={msg.id} className="w-full flex">
-                <div className={mine ? "w-full flex justify-end" : "w-full flex justify-start"}>
-                  <div className="max-w-xs flex flex-col">
-                    {!mine && (
-                      <div className="text-[11px] text-slate-500 mb-1">
-                        {msg.senderName}
-                      </div>
-                    )}
-
-                    <div
-                      className={
-                        mine
-                          ? "bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-2 shadow-sm"
-                          : "bg-slate-200 text-black rounded-2xl rounded-tl-none px-4 py-2 shadow-sm"
-                      }
-                    >
-                      {msg.content}
-                      <div className="text-[10px] opacity-70 mt-1">
-                        {formatTime(msg.timestamp)}
-                      </div>
+              <div
+                key={msg.id}
+                className={`w-full flex ${mine ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={
+                    mine
+                      ? "bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-2 shadow-sm"
+                      : "bg-slate-200 text-black rounded-2xl rounded-tl-none px-4 py-2 shadow-sm"
+                  }
+                >
+                  {!mine && (
+                    <div className="text-[11px] text-slate-600 mb-1">
+                      {msg.senderName}
                     </div>
-                  </div>
+                  )}
+                  {msg.content}
                 </div>
               </div>
             );
           })}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="text-xs text-slate-500 italic ml-2 h-4">
-          {typingUser ? `${typingUser} is typing...` : ""}
         </div>
 
         <div className="border-t border-slate-200 p-3 flex gap-2">
           <input
             value={text}
-            onChange={(e) => handleTyping(e.target.value)}
+            onChange={e => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") sendMessage();
             }}
             placeholder="Type a message..."
-            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="flex-1 border border-slate-200 rounded-lg px-3 py-2"
           />
-
           <button
             onClick={sendMessage}
-            className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700"
+            className="bg-blue-600 text-white px-4 rounded-lg"
           >
             Send
           </button>
         </div>
+
+        {selectedChannel && (
+          <div className="border-t p-3 flex gap-2">
+            <input
+              placeholder="Invite userId"
+              value={inviteUserId}
+              onChange={e => setInviteUserId(e.target.value)}
+              className="border px-2 py-1 rounded text-sm"
+            />
+            <button
+              onClick={inviteUser}
+              className="text-sm bg-slate-800 text-white px-2 rounded"
+            >
+              Invite
+            </button>
+          </div>
+        )}
       </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
+          <div className="bg-white p-6 rounded-xl shadow-xl w-80 space-y-3">
+            <h3 className="font-semibold">Create Channel</h3>
+
+            <input
+              value={newChannelName}
+              onChange={e => setNewChannelName(e.target.value)}
+              placeholder="Channel name"
+              className="w-full border rounded px-3 py-2"
+            />
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              Make this channel public
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createChannel}
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -411,14 +274,13 @@ export default function App() {
   };
 
   if (!token) {
-    return <AuthForm onLogin={handleLogin} />;
+    return <div>Please login</div>;
   }
 
   return (
     <Chat
       token={token}
-      currentUserId={user.id}
-      currentUsername={user.username}
+      user={user}
       onLogout={handleLogout}
     />
   );

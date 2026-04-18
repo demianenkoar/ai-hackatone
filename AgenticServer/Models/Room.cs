@@ -5,6 +5,11 @@ namespace AgenticServer.Models
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+
+        // New flexible visibility flag
+        public bool IsPublic { get; set; }
+
+        // Legacy field kept for compatibility
         public bool IsPrivate { get; set; }
 
         public Guid? OwnerId { get; set; }
