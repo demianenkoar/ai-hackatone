@@ -35,17 +35,21 @@ export default function AuthPage({ setToken }) {
 
     const data = await res.json();
 
-    if (!data.token) {
-      console.error("Login response missing token:", data);
+    console.log("Login response:", data);
+
+    const token = data.token || data.accessToken || data.jwt;
+
+    if (!token) {
+      console.error("No token found in login response");
       setMessage("Invalid login response");
       return;
     }
 
-    localStorage.setItem("token", data.token);
+    localStorage.setItem("token", token);
 
-    console.log("Token saved after login:", localStorage.getItem("token"));
+    console.log("Token saved:", localStorage.getItem("token"));
 
-    setToken(data.token);
+    setToken(token);
   };
 
   const register = async () => {
@@ -71,7 +75,7 @@ export default function AuthPage({ setToken }) {
       return;
     }
 
-    setMessage("Account created. Signing you in...");
+    console.log("Registration successful, logging in...");
 
     await login();
   };

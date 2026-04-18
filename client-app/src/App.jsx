@@ -60,8 +60,9 @@ function AppContent({ token, setToken }) {
     const res = await fetch(url, {
       ...options,
       headers: {
+        "Content-Type": "application/json",
         ...(options.headers || {}),
-        Authorization: `Bearer ${storedToken}`
+        Authorization: "Bearer " + storedToken
       }
     });
 
@@ -87,9 +88,6 @@ function AppContent({ token, setToken }) {
 
     const res = await safeFetch(`${API_BASE}/api/rooms`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
       body: JSON.stringify({
         name: newRoomName,
         isPublic: isPublic
