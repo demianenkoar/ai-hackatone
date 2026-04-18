@@ -42,10 +42,12 @@ namespace AgenticServer.Data
 
             await db.SaveChangesAsync();
 
-            // Ensure a General room exists if no rooms exist
-            if (!await db.Rooms.AnyAsync())
+            // Ensure the "General" room exists and is public
+            var generalRoom = await db.Rooms.FirstOrDefaultAsync(r => r.Name == "General");
+
+            if (generalRoom == null)
             {
-                var generalRoom = new Room
+                generalRoom = new Room
                 {
                     Id = Guid.NewGuid(),
                     Name = "General",
@@ -58,11 +60,18 @@ namespace AgenticServer.Data
                 db.Rooms.Add(generalRoom);
                 await db.SaveChangesAsync();
             }
-
-            var general = await db.Rooms.FirstAsync(r => r.Name == "General");
+            else
+            {
+                if (!generalRoom.IsPublic)
+                {
+                    generalRoom.IsPublic = true;
+                    generalRoom.IsPrivate = false;
+                    await db.SaveChangesAsync();
+                }
+            }
 
             var existingMessages = await db.Messages
-                .Where(m => m.RoomId == general.Id)
+                .Where(m => m.RoomId == generalRoom.Id)
                 .ToListAsync();
 
             if (existingMessages.Count > 0)
@@ -85,7 +94,7 @@ namespace AgenticServer.Data
                 messages.Add(new Message
                 {
                     Id = Guid.NewGuid(),
-                    RoomId = general.Id,
+                    RoomId = generalRoom.Id,
                     SenderId = sender.Id,
                     Content = $"Seed message #{i + 1}",
                     Timestamp = startTime.AddMinutes(i)
