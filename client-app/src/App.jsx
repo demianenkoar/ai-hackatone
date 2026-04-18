@@ -35,11 +35,8 @@ export default function App() {
         .withAutomaticReconnect()
         .build();
 
-      conn.on("ReceiveMessage", (id, roomId, senderId, content, timestamp) => {
-        setMessages(prev => [
-          ...prev,
-          { id, roomId, senderId, content, timestamp }
-        ]);
+      conn.on("ReceiveMessage", (newMessage) => {
+        setMessages(prev => [...prev, newMessage]);
 
         setTimeout(() => {
           const el = messageContainerRef.current;
@@ -71,6 +68,12 @@ export default function App() {
 
     setMessages([]);
     setOldestTimestamp(null);
+
+    const connection = connectionRef.current;
+
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
+      connection.invoke("JoinRoom", selectedChannel).catch(err => console.error(err));
+    }
 
     fetch(`${API_BASE}/api/messages/${selectedChannel}`)
       .then(r => r.json())

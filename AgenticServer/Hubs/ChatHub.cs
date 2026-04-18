@@ -59,14 +59,7 @@ namespace AgenticServer.Hubs
             _db.Messages.Add(message);
             await _db.SaveChangesAsync();
 
-            await Clients.Group(roomId.ToString()).SendAsync(
-                "ReceiveMessage",
-                message.Id,
-                message.RoomId,
-                message.SenderId,
-                message.Content,
-                message.Timestamp
-            );
+            await Clients.Group(roomId.ToString()).SendAsync("ReceiveMessage", message);
         }
     }
 }
