@@ -12,30 +12,33 @@ export default function AuthPage({ setToken }) {
   const [message, setMessage] = useState("");
 
   const login = async () => {
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       setMessage("Email and password are required");
       return;
     }
 
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        email: email,
+        email: normalizedEmail,
         password: password
       })
     });
 
-    if (!res.ok) {
+    const data = await response.json();
+
+    console.log("Login response:", data);
+
+    if (!response.ok) {
+      console.error("Login error detail:", data);
       setMessage("Login failed");
       return;
     }
-
-    const data = await res.json();
-
-    console.log("Login response:", data);
 
     const token = data.token || data.accessToken || data.jwt;
 
@@ -53,24 +56,29 @@ export default function AuthPage({ setToken }) {
   };
 
   const register = async () => {
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       setMessage("Email and password are required");
       return;
     }
 
-    const res = await fetch(`${API_BASE}/api/auth/register`, {
+    const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        email: email,
+        email: normalizedEmail,
         password: password,
-        userName: username || email
+        userName: username || normalizedEmail
       })
     });
 
-    if (!res.ok) {
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Registration error detail:", data);
       setMessage("Registration failed");
       return;
     }
