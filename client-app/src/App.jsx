@@ -3,6 +3,20 @@ import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
 
+function decodeUserId(token) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return (
+      payload.nameid ||
+      payload.sub ||
+      payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
 function AuthForm({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
@@ -105,7 +119,7 @@ function AuthForm({ onLogin }) {
   );
 }
 
-function Chat({ token, onLogout }) {
+function Chat({ token, onLogout, currentUserId }) {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -119,32 +133,6 @@ function Chat({ token, onLogout }) {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  };
-
-  const formatTimestamp = (ts) => {
-    const date = new Date(ts);
-    const now = new Date();
-
-    const sameDay =
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate();
-
-    if (sameDay) {
-      return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false
-      });
-    }
-
-    return date.toLocaleString([], {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    });
   };
 
   useEffect(() => {
@@ -247,39 +235,22 @@ function Chat({ token, onLogout }) {
       <div style={styles.chatArea}>
         <div style={styles.messages}>
           {messages.map(m => {
-            const isMe = m.senderName === "me";
+            const isMine = m.senderId === currentUserId;
+            const className = isMine ? "message-mine" : "message-other";
 
             return (
               <div
                 key={m.id}
+                className={className}
                 style={{
-                  ...styles.messageRow,
-                  alignItems: isMe ? "flex-end" : "flex-start"
+                  ...styles.messageBase,
+                  ...(isMine ? styles.messageMine : styles.messageOther)
                 }}
               >
-                <div
-                  style={{
-                    ...styles.bubble,
-                    alignSelf: isMe ? "flex-end" : "flex-start",
-                    background: isMe ? "#3b82f6" : "#e5e7eb",
-                    color: isMe ? "white" : "black"
-                  }}
-                >
-                  {!isMe && (
-                    <div style={styles.sender}>{m.senderName}</div>
-                  )}
-                  {m.content}
-                </div>
-
-                <div
-                  style={{
-                    ...styles.timestamp,
-                    textAlign: isMe ? "right" : "left",
-                    alignSelf: isMe ? "flex-end" : "flex-start"
-                  }}
-                >
-                  {formatTimestamp(m.timestamp)}
-                </div>
+                {!isMine && (
+                  <div style={styles.sender}>{m.senderName}</div>
+                )}
+                {m.content}
               </div>
             );
           })}
@@ -307,12 +278,31 @@ function Chat({ token, onLogout }) {
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt"));
+  const [currentUserId, setCurrentUserId] = useState(
+    token ? decodeUserId(token) : null
+  );
+
+  const handleLogin = (newToken) => {
+    setToken(newToken);
+    setCurrentUserId(decodeUserId(newToken));
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setCurrentUserId(null);
+  };
 
   if (!token) {
-    return <AuthForm onLogin={setToken} />;
+    return <AuthForm onLogin={handleLogin} />;
   }
 
-  return <Chat token={token} onLogout={() => setToken(null)} />;
+  return (
+    <Chat
+      token={token}
+      currentUserId={currentUserId}
+      onLogout={handleLogout}
+    />
+  );
 }
 
 const styles = {
@@ -352,7 +342,7 @@ const styles = {
     padding: 10,
     borderRadius: 6,
     border: "none",
-    background: "#3b82f6",
+    background: "#007bff",
     color: "white",
     cursor: "pointer",
     fontWeight: "bold"
@@ -365,7 +355,7 @@ const styles = {
   },
 
   link: {
-    color: "#3b82f6",
+    color: "#007bff",
     cursor: "pointer"
   },
 
@@ -404,8 +394,7 @@ const styles = {
   chatArea: {
     flex: 1,
     display: "flex",
-    flexDirection: "column",
-    height: "100vh"
+    flexDirection: "column"
   },
 
   messages: {
@@ -416,28 +405,31 @@ const styles = {
     flexDirection: "column"
   },
 
-  messageRow: {
-    display: "flex",
-    flexDirection: "column",
-    margin: "5px 0"
-  },
-
-  bubble: {
+  messageBase: {
     padding: "10px",
     borderRadius: "15px",
+    margin: "5px",
     maxWidth: "60%"
+  },
+
+  messageMine: {
+    marginLeft: "auto",
+    backgroundColor: "#007bff",
+    color: "white",
+    borderBottomRightRadius: 0
+  },
+
+  messageOther: {
+    marginRight: "auto",
+    backgroundColor: "#e9ecef",
+    color: "black",
+    borderBottomLeftRadius: 0
   },
 
   sender: {
     fontSize: 12,
     opacity: 0.7,
     marginBottom: 3
-  },
-
-  timestamp: {
-    fontSize: "0.75rem",
-    opacity: 0.7,
-    marginTop: 2
   },
 
   inputBar: {
