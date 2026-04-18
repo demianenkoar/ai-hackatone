@@ -15,6 +15,7 @@ export default function App() {
   const messageContainerRef = useRef(null);
   const loadingRef = useRef(false);
   const connectionRef = useRef(null);
+  const connectionReadyRef = useRef(null);
   const selectedChannelRef = useRef(null);
 
   useEffect(() => {
@@ -40,38 +41,39 @@ export default function App() {
         .withAutomaticReconnect()
         .build();
 
+      const receiveHandler = (message) => {
+        console.log("SignalR: Received message", message);
+
+        if (!message || message.roomId !== selectedChannelRef.current) {
+          return;
+        }
+
+        setMessages(prev => [...prev, message]);
+
+        setTimeout(() => {
+          const el = messageContainerRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 50);
+      };
+
+      conn.on("ReceiveMessage", receiveHandler);
+
       connectionRef.current = conn;
+
+      connectionReadyRef.current = conn
+        .start()
+        .then(() => {
+          console.log("SignalR connected");
+        })
+        .catch(err => {
+          console.error("SignalR connection error:", err);
+        });
     }
 
     const connection = connectionRef.current;
 
-    const receiveHandler = (message) => {
-      console.log("SignalR: Received message", message);
-
-      if (!message || message.roomId !== selectedChannelRef.current) {
-        return;
-      }
-
-      setMessages(prev => [...prev, message]);
-
-      setTimeout(() => {
-        const el = messageContainerRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
-      }, 50);
-    };
-
-    connection.on("ReceiveMessage", receiveHandler);
-
-    if (connection.state === signalR.HubConnectionState.Disconnected) {
-      connection
-        .start()
-        .then(() => console.log("SignalR connected"))
-        .catch(err => console.error("SignalR connection error", err));
-    }
-
     return () => {
-      connection.off("ReceiveMessage", receiveHandler);
-      if (connection.state === signalR.HubConnectionState.Connected) {
+      if (connection) {
         connection.stop();
       }
     };
@@ -83,11 +85,24 @@ export default function App() {
     setMessages([]);
     setOldestTimestamp(null);
 
-    const connection = connectionRef.current;
+    const joinRoom = async () => {
+      const connection = connectionRef.current;
 
-    if (connection && connection.state === signalR.HubConnectionState.Connected) {
-      connection.invoke("JoinRoom", selectedChannel).catch(err => console.error(err));
-    }
+      if (!connection) return;
+
+      try {
+        await connectionReadyRef.current;
+
+        if (connection.state === signalR.HubConnectionState.Connected) {
+          await connection.invoke("JoinRoom", selectedChannel);
+          console.log("Joined room", selectedChannel);
+        }
+      } catch (err) {
+        console.error("JoinRoom failed:", err);
+      }
+    };
+
+    joinRoom();
 
     fetch(`${API_BASE}/api/messages/${selectedChannel}`)
       .then(r => r.json())
