@@ -24,9 +24,19 @@ namespace AgenticServer.Controllers
             var cursor = before ?? DateTime.UtcNow;
 
             var messages = await _context.Messages
+                .Include(m => m.Sender)
                 .Where(m => m.RoomId == roomId && m.Timestamp < cursor)
                 .OrderByDescending(m => m.Timestamp)
                 .Take(limit)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    roomId = m.RoomId,
+                    senderId = m.SenderId,
+                    senderName = m.Sender != null ? m.Sender.Username : "Unknown",
+                    content = m.Content,
+                    timestamp = m.Timestamp
+                })
                 .ToListAsync();
 
             messages.Reverse();
@@ -40,9 +50,19 @@ namespace AgenticServer.Controllers
             var cursor = ts ?? DateTime.UtcNow;
 
             var messages = await _context.Messages
+                .Include(m => m.Sender)
                 .Where(m => m.RoomId == roomId && m.Timestamp < cursor)
                 .OrderByDescending(m => m.Timestamp)
                 .Take(20)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    roomId = m.RoomId,
+                    senderId = m.SenderId,
+                    senderName = m.Sender != null ? m.Sender.Username : "Unknown",
+                    content = m.Content,
+                    timestamp = m.Timestamp
+                })
                 .ToListAsync();
 
             return Ok(messages);

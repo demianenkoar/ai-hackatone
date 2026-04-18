@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
+const currentUserId = "00000000-0000-0000-0000-000000000001";
 
 export default function App() {
   const [channels, setChannels] = useState([]);
@@ -167,6 +168,11 @@ export default function App() {
     }
   };
 
+  const formatTime = (ts) => {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
   return (
     <div style={styles.app}>
       <div style={styles.sidebar}>
@@ -192,15 +198,32 @@ export default function App() {
           onScroll={handleScroll}
           style={styles.messages}
         >
-          {messages.map(m => (
-            <div key={m.id} style={styles.message}>
-              <div style={styles.sender}>{m.senderId}</div>
-              <div>{m.content}</div>
-              <div style={styles.time}>
-                {new Date(m.timestamp).toLocaleTimeString()}
+          {messages.map(m => {
+            const isMine = m.senderId === currentUserId;
+
+            return (
+              <div
+                key={m.id}
+                style={{
+                  display: "flex",
+                  justifyContent: isMine ? "flex-end" : "flex-start",
+                  marginBottom: "8px"
+                }}
+              >
+                <div style={{
+                  ...styles.bubble,
+                  background: isMine ? "#3b82f6" : "#e5e7eb",
+                  color: isMine ? "white" : "black"
+                }}>
+                  {!isMine && (
+                    <div style={styles.senderName}>{m.senderName}</div>
+                  )}
+                  <div>{m.content}</div>
+                  <div style={styles.time}>{formatTime(m.timestamp)}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div style={styles.inputBar}>
@@ -255,24 +278,22 @@ const styles = {
     overflowY: "auto",
     padding: "16px"
   },
-  message: {
-    background: "#ffffff",
-    borderRadius: "8px",
+  bubble: {
     padding: "10px 12px",
-    marginBottom: "10px",
-    maxWidth: "520px",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.08)"
+    borderRadius: "12px",
+    maxWidth: "60%",
+    fontSize: "14px"
   },
-  sender: {
-    fontSize: "12px",
-    color: "#555",
-    marginBottom: "4px",
-    fontWeight: "bold"
+  senderName: {
+    fontSize: "11px",
+    opacity: 0.7,
+    marginBottom: "2px"
   },
   time: {
-    fontSize: "11px",
-    color: "#888",
-    marginTop: "4px"
+    fontSize: "10px",
+    opacity: 0.7,
+    marginTop: "4px",
+    textAlign: "right"
   },
   inputBar: {
     borderTop: "1px solid #ddd",
