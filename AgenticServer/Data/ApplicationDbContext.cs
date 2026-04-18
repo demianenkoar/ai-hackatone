@@ -17,6 +17,7 @@ namespace AgenticServer.Data
         public DbSet<Friendship> Friendships => Set<Friendship>();
         public DbSet<Message> Messages => Set<Message>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
+		public DbSet<Channel> Channels { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
