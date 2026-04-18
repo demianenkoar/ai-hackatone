@@ -69,6 +69,12 @@ export default function AuthPage({ setToken }) {
 
     const derivedUsername = normalizedEmail.split("@")[0];
 
+    console.log("Sending registration data:", {
+      email: normalizedEmail,
+      password: password,
+      username: derivedUsername
+    });
+
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: {

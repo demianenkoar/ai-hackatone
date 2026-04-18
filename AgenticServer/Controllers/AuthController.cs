@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using AgenticServer.Data;
 using AgenticServer.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -13,14 +14,22 @@ namespace AgenticServer.Controllers
 {
     public class LoginRequest
     {
+        [JsonPropertyName("email")]
         public string Email { get; set; }
+
+        [JsonPropertyName("password")]
         public string Password { get; set; }
     }
 
     public class RegisterRequest
     {
+        [JsonPropertyName("email")]
         public string Email { get; set; }
+
+        [JsonPropertyName("password")]
         public string Password { get; set; }
+
+        [JsonPropertyName("username")]
         public string Username { get; set; }
     }
 
@@ -44,13 +53,19 @@ namespace AgenticServer.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest input)
         {
-            if (string.IsNullOrWhiteSpace(input.Email) || string.IsNullOrWhiteSpace(input.Password))
+            if (string.IsNullOrEmpty(input.Email))
             {
-                _logger.LogWarning("Registration failed due to empty email or password");
-                return BadRequest("Email and password are required");
+                return BadRequest("Email is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(input.Password))
+            {
+                return BadRequest("Password is required");
             }
 
             var normalizedEmail = input.Email.Trim().ToLower();
+
+            _logger.LogInformation("Register request received for email: {Email}", normalizedEmail);
 
             if (!normalizedEmail.Contains("@"))
             {
@@ -79,6 +94,7 @@ namespace AgenticServer.Controllers
             {
                 Id = Guid.NewGuid(),
                 Username = username,
+                Email = normalizedEmail,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -105,10 +121,8 @@ namespace AgenticServer.Controllers
 
             _logger.LogInformation("Attempting login for: {Email}", normalizedEmail);
 
-            var emailPrefix = normalizedEmail.Split("@")[0];
-
             var user = await _db.Users.FirstOrDefaultAsync(
-                x => x.Username == normalizedEmail || x.Username.StartsWith(emailPrefix)
+                x => x.Email == normalizedEmail
             );
 
             if (user == null)
