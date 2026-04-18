@@ -10,7 +10,6 @@ namespace AgenticServer.Data
         {
             await db.Database.MigrateAsync();
 
-            // Ensure test users exist
             var user1 = await db.Users.FirstOrDefaultAsync(u => u.Username == "artem1");
             if (user1 == null)
             {
@@ -43,18 +42,15 @@ namespace AgenticServer.Data
 
             await db.SaveChangesAsync();
 
-            // Ensure General room exists (by ID or Name)
-            var generalRoomId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000");
-
-            var generalRoom = await db.Rooms
-                .FirstOrDefaultAsync(r => r.Id == generalRoomId || r.Name == "General");
+            var generalRoom = await db.Rooms.FirstOrDefaultAsync(r => r.Name == "General");
 
             if (generalRoom == null)
             {
                 generalRoom = new Room
                 {
-                    Id = generalRoomId,
+                    Id = Guid.NewGuid(),
                     Name = "General",
+                    IsPublic = true,
                     IsPrivate = false,
                     OwnerId = null,
                     CreatedAt = DateTime.UtcNow
@@ -64,10 +60,8 @@ namespace AgenticServer.Data
                 await db.SaveChangesAsync();
             }
 
-            // Ensure we use the existing room ID
             var roomId = generalRoom.Id;
 
-            // Remove existing messages in this room to avoid duplicates
             var existingMessages = await db.Messages
                 .Where(m => m.RoomId == roomId)
                 .ToListAsync();
@@ -78,7 +72,6 @@ namespace AgenticServer.Data
                 await db.SaveChangesAsync();
             }
 
-            // Re-fetch users to ensure valid SenderId
             user1 = await db.Users.FirstAsync(u => u.Username == "artem1");
             user2 = await db.Users.FirstAsync(u => u.Username == "artem2");
 
