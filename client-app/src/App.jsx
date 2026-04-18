@@ -34,11 +34,14 @@ function Chat({ token, user, onLogout }) {
 
   const [text, setText] = useState("");
   const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
 
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
@@ -68,6 +71,30 @@ function Chat({ token, user, onLogout }) {
     if (!currentRoomId && data.length > 0) {
       setCurrentRoomId(data[0].id);
     }
+  };
+
+  const createRoom = async () => {
+    if (!newRoomName.trim()) return;
+
+    const res = await safeFetch(`${API_BASE}/api/rooms`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name: newRoomName,
+        isPublic: isPublic
+      })
+    });
+
+    if (!res) return;
+
+    setShowCreateModal(false);
+    setNewRoomName("");
+    setIsPublic(true);
+
+    loadChannels();
   };
 
   const loadMembers = async (roomId) => {
@@ -143,7 +170,9 @@ function Chat({ token, user, onLogout }) {
     if (!currentRoomId) return;
 
     setMembers([]);
-    loadMembers(currentRoomId);
+    if (isPrivateRoom) {
+      loadMembers(currentRoomId);
+    }
 
     setMessages([]);
     loadMessages(currentRoomId);
@@ -189,7 +218,15 @@ function Chat({ token, user, onLogout }) {
     <div className="w-full h-screen flex overflow-hidden">
 
       <div className="w-64 bg-slate-100 border-r p-4 flex flex-col">
-        <div className="font-semibold mb-3">Channels</div>
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-semibold">Channels</div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+          >
+            +
+          </button>
+        </div>
 
         <div className="text-xs text-slate-500 mb-3">
           Logged in as: {user.username}
@@ -267,28 +304,28 @@ function Chat({ token, user, onLogout }) {
         </div>
       </div>
 
-      <div className="w-64 border-l bg-slate-50 p-4">
-        <div className="flex justify-between items-center mb-3">
-          <div className="font-semibold">Members</div>
+      {isPrivateRoom && (
+        <div className="w-64 border-l bg-slate-50 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div className="font-semibold">Members</div>
 
-          {isPrivateRoom && (
             <button
               onClick={() => setShowInviteModal(true)}
               className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
             >
               Invite
             </button>
-          )}
-        </div>
+          </div>
 
-        <div className="space-y-2">
-          {members?.map(m => (
-            <div key={m?.userId} className="text-sm">
-              {m?.username}
-            </div>
-          ))}
+          <div className="space-y-2">
+            {members?.map(m => (
+              <div key={m?.userId} className="text-sm">
+                {m?.username}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
@@ -322,6 +359,46 @@ function Chat({ token, user, onLogout }) {
                 className="text-sm"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded w-80">
+            <h2 className="font-semibold mb-4">Create Channel</h2>
+
+            <input
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+              placeholder="Channel name"
+              className="w-full border px-3 py-2 rounded mb-3"
+            />
+
+            <label className="flex items-center gap-2 mb-4 text-sm">
+              <input
+                type="checkbox"
+                checked={!isPublic}
+                onChange={(e) => setIsPublic(!e.target.checked)}
+              />
+              Private Channel
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-sm"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={createRoom}
+                className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+              >
+                Create
               </button>
             </div>
           </div>
