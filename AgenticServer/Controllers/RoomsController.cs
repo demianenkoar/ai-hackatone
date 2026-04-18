@@ -78,32 +78,26 @@ namespace AgenticServer.Controllers
             return Ok(room);
         }
 
-        [HttpPost("add-user")]
-        public async Task<IActionResult> AddUserToRoom(string roomId, string userId)
+        [HttpPost("{roomId}/add-user/{userId}")]
+        public async Task<IActionResult> AddUserToRoom(Guid roomId, Guid userId)
         {
-            if (!Guid.TryParse(roomId, out Guid parsedRoomId))
-                return BadRequest("Invalid roomId");
-
-            if (!Guid.TryParse(userId, out Guid parsedUserId))
-                return BadRequest("Invalid userId");
-
             var exists = await _context.RoomMembers
-                .AnyAsync(m => m.RoomId == parsedRoomId && m.UserId == parsedUserId);
+                .AnyAsync(m => m.RoomId == roomId && m.UserId == userId);
 
             if (!exists)
             {
                 _context.RoomMembers.Add(new RoomMember
                 {
-                    RoomId = parsedRoomId,
-                    UserId = parsedUserId,
+                    RoomId = roomId,
+                    UserId = userId,
                     Role = RoomRole.Member
                 });
 
                 await _context.SaveChangesAsync();
             }
 
-            await _hub.Clients.User(parsedUserId.ToString())
-                .SendAsync("RoomAdded", parsedRoomId.ToString());
+            await _hub.Clients.User(userId.ToString())
+                .SendAsync("RoomAdded", roomId.ToString());
 
             return Ok();
         }

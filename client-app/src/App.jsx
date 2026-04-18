@@ -39,6 +39,10 @@ function Chat({ token, user, onLogout }) {
   const [newRoomName, setNewRoomName] = useState("");
   const [isPublic, setIsPublic] = useState(true);
 
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -79,8 +83,6 @@ function Chat({ token, user, onLogout }) {
 
   const loadMessages = async (roomId) => {
     if (!roomId) return;
-
-    console.log("Fetching messages for room:", roomId);
 
     const res = await fetch(`${API_BASE}/api/messages/${roomId}`);
     const data = await res.json();
@@ -132,6 +134,54 @@ function Chat({ token, user, onLogout }) {
     }
   };
 
+  const searchUsers = async (query) => {
+    setSearchQuery(query);
+
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const res = await fetch(
+      `${API_BASE}/api/users/search?query=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (res.status === 401) {
+      console.warn("Unauthorized request while searching users");
+      return;
+    }
+
+    const data = await res.json();
+    setSearchResults(data);
+  };
+
+  const inviteUser = async (userId) => {
+    const res = await fetch(
+      `${API_BASE}/api/rooms/${currentRoomId}/add-user/${userId}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (res.status === 401) {
+      console.warn("Unauthorized invite attempt");
+      return;
+    }
+
+    alert("User added");
+    setShowInviteModal(false);
+    setSearchResults([]);
+    setSearchQuery("");
+  };
+
   const createChannel = async () => {
     if (!newRoomName.trim()) return;
 
@@ -161,7 +211,6 @@ function Chat({ token, user, onLogout }) {
   useEffect(() => {
     if (!currentRoomId) return;
 
-    // Reset when switching rooms
     setMessages([]);
     setHasMore(true);
 
@@ -191,8 +240,6 @@ function Chat({ token, user, onLogout }) {
     });
 
     connection.start().then(() => {
-      console.log("SignalR connected");
-
       if (currentRoomId) {
         connection.invoke("JoinRoom", currentRoomId);
       }
@@ -250,6 +297,18 @@ function Chat({ token, user, onLogout }) {
       </div>
 
       <div className="flex-1 flex flex-col bg-white">
+        <div className="border-b p-3 flex justify-between items-center">
+          <div className="font-semibold">Chat</div>
+          {currentRoomId && (
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="text-sm bg-green-600 text-white px-3 py-1 rounded"
+            >
+              Invite
+            </button>
+          )}
+        </div>
+
         <div
           ref={containerRef}
           onScroll={handleScroll}
@@ -301,39 +360,41 @@ function Chat({ token, user, onLogout }) {
         </div>
       </div>
 
-      {showCreateModal && (
+      {showInviteModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl w-80 shadow-xl">
-            <h2 className="font-semibold mb-3">Create Channel</h2>
+            <h2 className="font-semibold mb-3">Invite User</h2>
 
             <input
-              value={newRoomName}
-              onChange={e => setNewRoomName(e.target.value)}
-              placeholder="Channel name"
+              value={searchQuery}
+              onChange={(e) => searchUsers(e.target.value)}
+              placeholder="Search username..."
               className="w-full border border-slate-200 rounded px-3 py-2 mb-3"
             />
 
-            <label className="flex items-center gap-2 mb-4 text-sm">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-              />
-              Public channel
-            </label>
+            <div className="max-h-40 overflow-y-auto space-y-2">
+              {searchResults?.map(u => (
+                <div
+                  key={u?.id}
+                  className="flex justify-between items-center border rounded px-2 py-1"
+                >
+                  <span>{u?.username}</span>
+                  <button
+                    onClick={() => inviteUser(u?.id)}
+                    className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+                  >
+                    Invite
+                  </button>
+                </div>
+              ))}
+            </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end mt-4">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => setShowInviteModal(false)}
                 className="text-sm"
               >
-                Cancel
-              </button>
-              <button
-                onClick={createChannel}
-                className="bg-blue-600 text-white px-3 py-1 rounded"
-              >
-                Create
+                Close
               </button>
             </div>
           </div>
