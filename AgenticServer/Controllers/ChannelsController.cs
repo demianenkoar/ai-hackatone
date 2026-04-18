@@ -1,19 +1,34 @@
-using Microsoft.AspNetCore.Mvc;
 using AgenticServer.Data;
-using AgenticServer.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-[Route("api/[controller]")]
-[ApiController]
-public class ChannelsController : ControllerBase {
-    private readonly ApplicationDbContext _context;
-    public ChannelsController(ApplicationDbContext context) => _context = context;
+namespace AgenticServer.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ChannelsController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
 
-    [HttpGet] public async Task<ActionResult<IEnumerable<Channel>>> Get() => await _context.Channels.ToListAsync();
+        public ChannelsController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
-    [HttpPost] public async Task<ActionResult<Channel>> Post(Channel channel) {
-        _context.Channels.Add(channel);
-        await _context.SaveChangesAsync();
-        return Ok(channel);
+        [HttpGet]
+        public async Task<IActionResult> GetChannels()
+        {
+            var channels = await _context.Rooms
+                .Where(r => !r.IsPrivate)
+                .OrderBy(r => r.Name)
+                .Select(r => new
+                {
+                    Id = r.Id,
+                    Title = r.Name
+                })
+                .ToListAsync();
+
+            return Ok(channels);
+        }
     }
 }
