@@ -142,21 +142,16 @@ function Chat({ token, onLogout }) {
       setMessages(prev => [...prev, message]);
     });
 
-    connection
-      .start()
-      .then(() => {
-        if (selectedChannelRef.current) {
-          connection.invoke("JoinRoom", selectedChannelRef.current);
-        }
-      })
-      .catch(err => console.error("SignalR connection error:", err));
+    connection.start().then(() => {
+      if (selectedChannelRef.current) {
+        connection.invoke("JoinRoom", selectedChannelRef.current);
+      }
+    });
 
     connectionRef.current = connection;
 
     return () => {
-      if (connection) {
-        connection.stop();
-      }
+      if (connection) connection.stop();
     };
   }, [token]);
 
@@ -184,9 +179,7 @@ function Chat({ token, onLogout }) {
 
   const logout = () => {
     const connection = connectionRef.current;
-    if (connection) {
-      connection.stop();
-    }
+    if (connection) connection.stop();
 
     localStorage.removeItem("jwt");
     onLogout();
@@ -216,11 +209,32 @@ function Chat({ token, onLogout }) {
 
       <div style={styles.chatArea}>
         <div style={styles.messages}>
-          {messages.map(m => (
-            <div key={m.id} style={styles.message}>
-              <b>{m.senderName}</b>: {m.content}
-            </div>
-          ))}
+          {messages.map(m => {
+            const isMe = m.senderName === "me";
+
+            return (
+              <div
+                key={m.id}
+                style={{
+                  ...styles.messageRow,
+                  justifyContent: isMe ? "flex-end" : "flex-start"
+                }}
+              >
+                <div
+                  style={{
+                    ...styles.bubble,
+                    background: isMe ? "#3b82f6" : "#e5e7eb",
+                    color: isMe ? "white" : "black"
+                  }}
+                >
+                  {!isMe && (
+                    <div style={styles.sender}>{m.senderName}</div>
+                  )}
+                  {m.content}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div style={styles.inputBar}>
@@ -341,24 +355,44 @@ const styles = {
   chatArea: {
     flex: 1,
     display: "flex",
-    flexDirection: "column"
+    flexDirection: "column",
+    height: "100vh"
   },
 
   messages: {
     flex: 1,
     overflowY: "auto",
-    padding: 20
+    padding: 15,
+    display: "flex",
+    flexDirection: "column"
   },
 
-  message: {
-    marginBottom: 8
+  messageRow: {
+    display: "flex",
+    width: "100%",
+    margin: "5px 0"
+  },
+
+  bubble: {
+    padding: "10px",
+    borderRadius: "15px",
+    maxWidth: "60%"
+  },
+
+  sender: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 3
   },
 
   inputBar: {
+    position: "sticky",
+    bottom: 0,
     display: "flex",
     padding: 10,
     borderTop: "1px solid #ddd",
-    gap: 10
+    gap: 10,
+    background: "white"
   },
 
   chatInput: {
