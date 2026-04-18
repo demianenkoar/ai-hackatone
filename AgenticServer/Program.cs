@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSignalR();
+builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
 {
@@ -52,5 +53,7 @@ app.MapGet("/test-db", async (IConfiguration config) =>
 });
 
 app.MapHub<NotificationHub>("/hubs/notifications");
+
+app.MapControllers();
 
 app.Run();
