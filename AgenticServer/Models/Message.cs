@@ -18,7 +18,7 @@ namespace AgenticServer.Models
         public Guid? ReplyToMessageId { get; set; }
         public Message? ReplyToMessage { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+        public DateTime Timestamp { get; set; }
         public DateTime? EditedAt { get; set; }
 
         public ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();

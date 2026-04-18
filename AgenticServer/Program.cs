@@ -53,6 +53,7 @@ app.MapGet("/test-db", async (IConfiguration config) =>
 });
 
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/chatHub");
 
 app.MapControllers();
 
