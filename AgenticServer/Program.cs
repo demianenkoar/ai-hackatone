@@ -19,7 +19,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("ReactDev", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -31,10 +31,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
-app.UseCors("ReactDev");
-
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseCors("ReactDev");
+
+app.UseAuthorization();
 
 app.MapGet("/", () => "AgenticServer running");
 
