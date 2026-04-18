@@ -70,7 +70,7 @@ namespace AgenticServer.Controllers
 
             var random = new Random();
 
-            while (await _db.Users.AnyAsync(x => x.Username.ToLower() == username))
+            while (await _db.Users.AnyAsync(x => x.Username == username))
             {
                 username = $"{baseUsername}_{random.Next(100, 999)}";
             }
@@ -105,7 +105,11 @@ namespace AgenticServer.Controllers
 
             _logger.LogInformation("Attempting login for: {Email}", normalizedEmail);
 
-            var user = await _db.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == normalizedEmail || x.Username.ToLower().StartsWith(normalizedEmail.Split("@")[0]));
+            var emailPrefix = normalizedEmail.Split("@")[0];
+
+            var user = await _db.Users.FirstOrDefaultAsync(
+                x => x.Username == normalizedEmail || x.Username.StartsWith(emailPrefix)
+            );
 
             if (user == null)
             {
