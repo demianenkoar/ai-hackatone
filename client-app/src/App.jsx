@@ -186,6 +186,10 @@ function Chat({ token, user, onLogout }) {
     if (!currentRoomId && data.length > 0) {
       setCurrentRoomId(data[0].id);
     }
+
+    if (currentRoomId && !data.find(c => c.id === currentRoomId) && data.length > 0) {
+      setCurrentRoomId(data[0].id);
+    }
   };
 
   const createRoom = async () => {
@@ -329,6 +333,24 @@ function Chat({ token, user, onLogout }) {
   const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
   const privateChannels = channels.filter(c => (c.isPrivate ?? !c.isPublic));
 
+  const renderChannel = (c) => {
+    const active = c.id === currentRoomId;
+
+    return (
+      <div
+        key={c.id}
+        onClick={() => setCurrentRoomId(c.id)}
+        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-all duration-200
+        ${active ? "bg-blue-600 text-white" : "hover:bg-gray-200"}`}
+      >
+        {active && (
+          <span className="w-2 h-2 bg-white rounded-full"></span>
+        )}
+        <span>{c.name ?? c.title}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full h-screen flex overflow-hidden">
 
@@ -348,26 +370,10 @@ function Chat({ token, user, onLogout }) {
         </div>
 
         <div className="text-xs font-semibold text-slate-500 mt-2">Public Channels</div>
-        {publicChannels.map(c => (
-          <div
-            key={c.id}
-            onClick={() => setCurrentRoomId(c.id)}
-            className="p-2 cursor-pointer hover:bg-slate-200 rounded"
-          >
-            {c.name ?? c.title}
-          </div>
-        ))}
+        {publicChannels.map(renderChannel)}
 
         <div className="text-xs font-semibold text-slate-500 mt-4">Private Groups</div>
-        {privateChannels.map(c => (
-          <div
-            key={c.id}
-            onClick={() => setCurrentRoomId(c.id)}
-            className="p-2 cursor-pointer hover:bg-slate-200 rounded"
-          >
-            {c.name ?? c.title}
-          </div>
-        ))}
+        {privateChannels.map(renderChannel)}
 
         <button onClick={onLogout} className="text-sm text-red-500 mt-auto">
           Logout
