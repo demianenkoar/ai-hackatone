@@ -52,6 +52,24 @@ namespace AgenticServer.Data
                 .HasForeignKey(f => f.FriendId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<RoomMember>()
+                .HasOne(rm => rm.Room)
+                .WithMany()
+                .HasForeignKey(rm => rm.RoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RoomMember>()
+                .HasOne(rm => rm.User)
+                .WithMany()
+                .HasForeignKey(rm => rm.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<RoomMember>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(rm => rm.BannedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<Message>()
                 .Property(m => m.Content)
                 .HasMaxLength(3072);
@@ -60,19 +78,19 @@ namespace AgenticServer.Data
                 .HasOne(m => m.Sender)
                 .WithMany()
                 .HasForeignKey(m => m.SenderId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.Recipient)
                 .WithMany()
                 .HasForeignKey(m => m.RecipientId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.ReplyToMessage)
                 .WithMany()
                 .HasForeignKey(m => m.ReplyToMessageId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }
