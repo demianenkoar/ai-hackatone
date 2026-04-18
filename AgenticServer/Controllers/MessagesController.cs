@@ -1,8 +1,10 @@
 using AgenticServer.Data;
 using AgenticServer.Models;
+using AgenticServer.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 
 namespace AgenticServer.Controllers
 {
@@ -12,10 +14,12 @@ namespace AgenticServer.Controllers
     public class MessagesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public MessagesController(ApplicationDbContext context)
+        public MessagesController(ApplicationDbContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet("{roomId}")]
@@ -50,7 +54,6 @@ namespace AgenticServer.Controllers
                 })
                 .ToListAsync();
 
-            // Return chronological order for frontend
             messages.Reverse();
 
             return Ok(messages);
@@ -78,14 +81,24 @@ namespace AgenticServer.Controllers
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
-            return Ok(new
+            var sender = await _context.Users.FindAsync(message.SenderId);
+
+            var messageDto = new
             {
                 id = message.Id,
                 roomId = message.RoomId,
                 senderId = message.SenderId,
+                senderName = sender?.Username ?? "Unknown",
                 content = message.Content,
                 timestamp = message.Timestamp
-            });
+            };
+
+            await _hubContext
+                .Clients
+                .Group(message.RoomId.ToString())
+                .SendAsync("ReceiveMessage", messageDto);
+
+            return Ok(messageDto);
         }
 
         [HttpGet("history")]
