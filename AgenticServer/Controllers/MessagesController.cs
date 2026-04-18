@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AgenticServer.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/rooms")]
     public class MessagesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -15,22 +15,13 @@ namespace AgenticServer.Controllers
             _context = context;
         }
 
-        [HttpGet("{roomId}")]
+        [HttpGet("{roomId}/messages")]
         public async Task<IActionResult> GetMessages(
             Guid roomId,
-            [FromQuery] Guid userId,
-            [FromQuery] DateTime? beforeTimestamp,
+            [FromQuery] DateTime? before,
             [FromQuery] int limit = 20)
         {
-            var membership = await _context.RoomMembers
-                .FirstOrDefaultAsync(rm => rm.RoomId == roomId && rm.UserId == userId);
-
-            if (membership != null && membership.IsBanned)
-            {
-                return Forbid();
-            }
-
-            var cursor = beforeTimestamp ?? DateTime.UtcNow;
+            var cursor = before ?? DateTime.UtcNow;
 
             var messages = await _context.Messages
                 .Where(m => m.RoomId == roomId && m.Timestamp < cursor)
