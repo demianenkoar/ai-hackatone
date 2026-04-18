@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Claims;
 using AgenticServer.Data;
 using AgenticServer.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -19,12 +20,18 @@ namespace AgenticServer.Hubs
 
         public async Task SendMessage(Guid roomId, string message)
         {
-            var senderIdString = Context.UserIdentifier;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (string.IsNullOrEmpty(senderIdString))
+            if (string.IsNullOrEmpty(userId))
                 throw new HubException("User not identified");
 
-            var senderId = Guid.Parse(senderIdString);
+            var senderId = Guid.Parse(userId);
+
+            var membership = await _db.RoomMembers
+                .FirstOrDefaultAsync(rm => rm.RoomId == roomId && rm.UserId == senderId);
+
+            if (membership == null || membership.IsBanned)
+                throw new HubException("User is not allowed to send messages in this room");
 
             var msg = new Message
             {
@@ -50,23 +57,46 @@ namespace AgenticServer.Hubs
 
         public async Task JoinRoom(Guid roomId)
         {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                throw new HubException("User not identified");
+
+            var parsedUserId = Guid.Parse(userId);
+
+            var membership = await _db.RoomMembers
+                .FirstOrDefaultAsync(rm => rm.RoomId == roomId && rm.UserId == parsedUserId);
+
+            if (membership == null || membership.IsBanned)
+                throw new HubException("User is not allowed to join this room");
+
             await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
         }
 
-        public override Task OnConnectedAsync()
+        public override async Task OnConnectedAsync()
         {
-            var userId = Context.UserIdentifier ?? Context.ConnectionId;
-            OnlineUsers[userId] = Context.ConnectionId;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            return base.OnConnectedAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                OnlineUsers[userId] = Context.ConnectionId;
+                await Clients.All.SendAsync("UserStatusChanged", userId, true);
+            }
+
+            await base.OnConnectedAsync();
         }
 
-        public override Task OnDisconnectedAsync(Exception? exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.UserIdentifier ?? Context.ConnectionId;
-            OnlineUsers.TryRemove(userId, out _);
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            return base.OnDisconnectedAsync(exception);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                OnlineUsers.TryRemove(userId, out _);
+                await Clients.All.SendAsync("UserStatusChanged", userId, false);
+            }
+
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }
