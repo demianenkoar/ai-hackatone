@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using AgenticServer.Hubs;
 using AgenticServer.Data;
 using Microsoft.Data.SqlClient;
@@ -6,16 +7,22 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSignalR();
-builder.Services.AddControllers();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("ReactDev", policy =>
     {
         policy
+            .WithOrigins("http://localhost:3000")
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowAnyOrigin();
+            .AllowCredentials();
     });
 });
 
@@ -24,7 +31,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
-app.UseCors("AllowAll");
+app.UseCors("ReactDev");
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
