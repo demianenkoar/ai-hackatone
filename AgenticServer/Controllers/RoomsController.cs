@@ -82,10 +82,10 @@ namespace AgenticServer.Controllers
         public async Task<IActionResult> AddUserToRoom(string roomId, string userId)
         {
             if (!Guid.TryParse(roomId, out Guid parsedRoomId))
-                return BadRequest("Invalid GUID format");
+                return BadRequest();
 
             if (!Guid.TryParse(userId, out Guid parsedUserId))
-                return BadRequest("Invalid GUID format");
+                return BadRequest();
 
             var exists = await _context.RoomMembers
                 .AnyAsync(m => m.RoomId == parsedRoomId && m.UserId == parsedUserId);

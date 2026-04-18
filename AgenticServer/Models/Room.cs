@@ -6,10 +6,10 @@ namespace AgenticServer.Models
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
 
-        // New flexible visibility flag
-        public bool IsPublic { get; set; }
+        // Public rooms are visible to everyone
+        public bool IsPublic { get; set; } = true;
 
-        // Legacy field kept for compatibility
+        // Legacy compatibility flag
         public bool IsPrivate { get; set; }
 
         public Guid? OwnerId { get; set; }
