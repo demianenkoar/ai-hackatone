@@ -57,4 +57,15 @@ app.MapHub<ChatHub>("/chatHub");
 
 app.MapControllers();
 
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Database migration failed: {ex.Message}");
+}
+
 app.Run();
