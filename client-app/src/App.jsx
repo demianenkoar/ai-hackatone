@@ -144,11 +144,13 @@ function AuthPage({ setToken }) {
 function Chat({ token, user, onLogout }) {
   const [channels, setChannels] = useState([]);
   const [currentRoomId, setCurrentRoomId] = useState(null);
+
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
 
   const [text, setText] = useState("");
   const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,6 +162,7 @@ function Chat({ token, user, onLogout }) {
 
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   const currentRoom = channels.find(c => c.id === currentRoomId);
   const isPrivateRoom = currentRoom?.isPrivate ?? !currentRoom?.isPublic;
@@ -171,6 +174,18 @@ function Chat({ token, user, onLogout }) {
       return null;
     }
     return res;
+  };
+
+  const scrollToBottom = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const isNearBottom = () => {
+    const el = containerRef.current;
+    if (!el) return false;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD;
   };
 
   const loadChannels = async () => {
@@ -217,8 +232,6 @@ function Chat({ token, user, onLogout }) {
   };
 
   const loadMembers = async (roomId) => {
-    if (!roomId) return;
-
     const res = await safeFetch(`${API_BASE}/api/rooms/${roomId}/members`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -229,17 +242,67 @@ function Chat({ token, user, onLogout }) {
     setMembers(data);
   };
 
-  const loadMessages = async (roomId) => {
-    const res = await fetch(`${API_BASE}/api/messages/${roomId}`);
+  const fetchMessages = async (roomId, before) => {
+    if (!roomId) return;
+
+    let url = `${API_BASE}/api/messages/${roomId}?limit=${PAGE_SIZE}`;
+    if (before) {
+      url += `&before=${encodeURIComponent(before)}`;
+    }
+
+    const res = await safeFetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res) return [];
+
     const data = await res.json();
+    return data;
+  };
+
+  const loadInitialMessages = async (roomId) => {
+    const data = await fetchMessages(roomId);
+
     setMessages(data);
     setHasMore(data.length === PAGE_SIZE);
+
     setTimeout(scrollToBottom, 50);
   };
 
-  const scrollToBottom = () => {
-    const c = containerRef.current;
-    if (c) c.scrollTop = c.scrollHeight;
+  const loadOlderMessages = async () => {
+    if (!hasMore || loadingMore || messages.length === 0) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    setLoadingMore(true);
+
+    const oldest = messages[0];
+    const prevHeight = container.scrollHeight;
+
+    const older = await fetchMessages(currentRoomId, oldest.timestamp);
+
+    if (older.length < PAGE_SIZE) {
+      setHasMore(false);
+    }
+
+    setMessages(prev => [...older, ...prev]);
+
+    setTimeout(() => {
+      const newHeight = container.scrollHeight;
+      container.scrollTop = newHeight - prevHeight;
+    }, 0);
+
+    setLoadingMore(false);
+  };
+
+  const handleScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (el.scrollTop === 0) {
+      loadOlderMessages();
+    }
   };
 
   const searchUsers = async (query) => {
@@ -294,7 +357,8 @@ function Chat({ token, user, onLogout }) {
     }
 
     setMessages([]);
-    loadMessages(currentRoomId);
+    setHasMore(true);
+    loadInitialMessages(currentRoomId);
   }, [currentRoomId]);
 
   useEffect(() => {
@@ -309,8 +373,14 @@ function Chat({ token, user, onLogout }) {
 
     connection.on("ReceiveMessage", (msg) => {
       if (msg.roomId !== currentRoomId) return;
+
+      const shouldScroll = isNearBottom();
+
       setMessages(prev => [...prev, msg]);
-      setTimeout(scrollToBottom, 20);
+
+      if (shouldScroll) {
+        setTimeout(scrollToBottom, 20);
+      }
     });
 
     connection.start().then(() => {
@@ -326,8 +396,15 @@ function Chat({ token, user, onLogout }) {
 
   const sendMessage = async () => {
     if (!text.trim()) return;
+
+    const shouldScroll = isNearBottom();
+
     await connectionRef.current.invoke("SendMessage", currentRoomId, text);
     setText("");
+
+    if (shouldScroll) {
+      setTimeout(scrollToBottom, 20);
+    }
   };
 
   const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
@@ -343,9 +420,7 @@ function Chat({ token, user, onLogout }) {
         className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-all duration-200
         ${active ? "bg-blue-600 text-white" : "hover:bg-gray-200"}`}
       >
-        {active && (
-          <span className="w-2 h-2 bg-white rounded-full"></span>
-        )}
+        {active && <span className="w-2 h-2 bg-white rounded-full"></span>}
         <span>{c.name ?? c.title}</span>
       </div>
     );
@@ -387,6 +462,7 @@ function Chat({ token, user, onLogout }) {
 
         <div
           ref={containerRef}
+          onScroll={handleScroll}
           className="flex-1 overflow-y-auto p-4 space-y-4"
         >
           {messages.map(msg => {
@@ -407,6 +483,7 @@ function Chat({ token, user, onLogout }) {
               </div>
             );
           })}
+          <div ref={messagesEndRef}></div>
         </div>
 
         <div className="border-t p-3 flex gap-2">
