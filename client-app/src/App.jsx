@@ -3,15 +3,114 @@ import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
 
-export default function App() {
-
-  const [token, setToken] = useState(localStorage.getItem("jwt"));
+function AuthForm({ onLogin }) {
+  const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      if (mode === "register") {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username,
+            passwordHash: password,
+            email: `${username}@local`
+          })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Registration failed");
+        }
+
+        setMode("login");
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          passwordHash: password
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      const data = await res.json();
+      localStorage.setItem("jwt", data.token);
+      onLogin(data.token);
+
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div style={styles.authWrapper}>
+      <form style={styles.authCard} onSubmit={submit}>
+        <h2 style={styles.authTitle}>
+          {mode === "login" ? "Login" : "Create Account"}
+        </h2>
+
+        <input
+          style={styles.input}
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+        />
+
+        <input
+          style={styles.input}
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
+
+        {error && <div style={styles.error}>{error}</div>}
+
+        <button style={styles.primaryButton}>
+          {mode === "login" ? "Login" : "Register"}
+        </button>
+
+        <div style={styles.toggle}>
+          {mode === "login" ? (
+            <>
+              No account?{" "}
+              <span style={styles.link} onClick={() => setMode("register")}>
+                Register
+              </span>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <span style={styles.link} onClick={() => setMode("login")}>
+                Login
+              </span>
+            </>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function Chat({ token }) {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [text, setText] = useState("");
 
   const connectionRef = useRef(null);
   const selectedChannelRef = useRef(null);
@@ -20,31 +119,17 @@ export default function App() {
     selectedChannelRef.current = selectedChannel;
   }, [selectedChannel]);
 
-  const login = async () => {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        passwordHash: password
-      })
-    });
-
-    const data = await res.json();
-
-    localStorage.setItem("jwt", data.token);
-    setToken(data.token);
-  };
-
   useEffect(() => {
-    if (!token) return;
-
     fetch(`${API_BASE}/api/channels`)
       .then(r => r.json())
       .then(data => {
         setChannels(data);
         if (data.length > 0) setSelectedChannel(data[0].id);
       });
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${API_BASE}/chatHub`, {
@@ -59,64 +144,199 @@ export default function App() {
     });
 
     connection.start().then(() => {
-      if (selectedChannelRef.current)
+      if (selectedChannelRef.current) {
         connection.invoke("JoinRoom", selectedChannelRef.current);
+      }
     });
 
     connectionRef.current = connection;
 
     return () => connection.stop();
-
   }, [token]);
 
-  const sendMessage = async (text) => {
+  useEffect(() => {
+    if (!selectedChannel) return;
+
+    fetch(`${API_BASE}/api/messages/${selectedChannel}`)
+      .then(r => r.json())
+      .then(data => setMessages(data));
+
     const connection = connectionRef.current;
-    if (!connection) return;
+
+    if (connection && connection.state === "Connected") {
+      connection.invoke("JoinRoom", selectedChannel);
+    }
+
+  }, [selectedChannel]);
+
+  const sendMessage = async () => {
+    const connection = connectionRef.current;
+    if (!connection || !text.trim()) return;
 
     await connection.invoke("SendMessage", selectedChannel, text);
+    setText("");
   };
 
-  if (!token) {
-    return (
-      <div style={{ padding: 40 }}>
-        <h2>Login</h2>
-        <input placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)} />
-        <br/>
-        <input placeholder="Password"
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)} />
-        <br/>
-        <button onClick={login}>Login</button>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <h3>Channels</h3>
-      {channels.map(c => (
-        <div key={c.id} onClick={() => setSelectedChannel(c.id)}>
-          {c.title}
-        </div>
-      ))}
-
-      <div>
-        {messages.map(m => (
-          <div key={m.id}>
-            <b>{m.senderName}</b>: {m.content}
+    <div style={styles.app}>
+      <div style={styles.sidebar}>
+        <h3 style={{ marginBottom: 10 }}>Channels</h3>
+        {channels.map(c => (
+          <div
+            key={c.id}
+            style={{
+              ...styles.channelItem,
+              background: selectedChannel === c.id ? "#e6f0ff" : "transparent"
+            }}
+            onClick={() => setSelectedChannel(c.id)}
+          >
+            {c.title}
           </div>
         ))}
       </div>
 
-      <input
-        placeholder="Message"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") sendMessage(e.target.value);
-        }}
-      />
+      <div style={styles.chatArea}>
+        <div style={styles.messages}>
+          {messages.map(m => (
+            <div key={m.id} style={styles.message}>
+              <b>{m.senderName}</b>: {m.content}
+            </div>
+          ))}
+        </div>
+
+        <div style={styles.inputBar}>
+          <input
+            style={styles.chatInput}
+            value={text}
+            placeholder="Type a message..."
+            onChange={e => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") sendMessage();
+            }}
+          />
+          <button style={styles.primaryButton} onClick={sendMessage}>
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
+export default function App() {
+  const [token, setToken] = useState(localStorage.getItem("jwt"));
+
+  if (!token) {
+    return <AuthForm onLogin={setToken} />;
+  }
+
+  return <Chat token={token} />;
+}
+
+const styles = {
+  authWrapper: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "#f5f7fb",
+    fontFamily: "Arial, sans-serif"
+  },
+
+  authCard: {
+    background: "white",
+    padding: 30,
+    borderRadius: 10,
+    width: 320,
+    boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12
+  },
+
+  authTitle: {
+    marginBottom: 10,
+    textAlign: "center"
+  },
+
+  input: {
+    padding: 10,
+    borderRadius: 6,
+    border: "1px solid #ccc",
+    fontSize: 14
+  },
+
+  primaryButton: {
+    padding: 10,
+    borderRadius: 6,
+    border: "none",
+    background: "#3b82f6",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: "bold"
+  },
+
+  toggle: {
+    marginTop: 10,
+    textAlign: "center",
+    fontSize: 13
+  },
+
+  link: {
+    color: "#3b82f6",
+    cursor: "pointer"
+  },
+
+  error: {
+    color: "red",
+    fontSize: 12
+  },
+
+  app: {
+    display: "flex",
+    height: "100vh",
+    fontFamily: "Arial, sans-serif"
+  },
+
+  sidebar: {
+    width: 220,
+    borderRight: "1px solid #ddd",
+    padding: 15
+  },
+
+  channelItem: {
+    padding: 8,
+    borderRadius: 6,
+    cursor: "pointer"
+  },
+
+  chatArea: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column"
+  },
+
+  messages: {
+    flex: 1,
+    overflowY: "auto",
+    padding: 20
+  },
+
+  message: {
+    marginBottom: 8
+  },
+
+  inputBar: {
+    display: "flex",
+    padding: 10,
+    borderTop: "1px solid #ddd",
+    gap: 10
+  },
+
+  chatInput: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
+    border: "1px solid #ccc"
+  }
+};
