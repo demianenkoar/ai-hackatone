@@ -8,24 +8,66 @@ function formatTimestamp(ts) {
   });
 }
 
+function getCurrentUserId() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+
+    const payload = JSON.parse(atob(token.split(".")[1]));
+
+    return (
+      payload.nameid ||
+      payload.sub ||
+      payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
 export default function Message({ msg }) {
   const time = formatTimestamp(msg.timestamp);
+  const currentUserId = getCurrentUserId();
+
+  const isMine =
+    currentUserId &&
+    msg.senderId &&
+    String(msg.senderId) === String(currentUserId);
 
   return (
-    <div className="flex gap-3">
-      <div className="avatar">
-        {msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "U"}
-      </div>
-
-      <div className="bg-white message-card rounded px-4 py-2 max-w-xl w-full">
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span className="font-semibold text-gray-700">
-            {msg.senderName}
-          </span>
-          <span>{time}</span>
+    <div
+      className="flex flex-col"
+      style={{
+        alignSelf: isMine ? "flex-end" : "flex-start",
+        maxWidth: "60%"
+      }}
+    >
+      {!isMine && (
+        <div className="text-xs text-gray-500 mb-1 ml-1">
+          {msg.senderName}
         </div>
+      )}
 
-        <div className="text-sm">{msg.content}</div>
+      <div
+        className="px-4 py-2 text-sm"
+        style={{
+          backgroundColor: isMine ? "#e5e5f1" : "#ffffff",
+          border: isMine ? "none" : "1px solid #e1e1e1",
+          borderRadius: "10px",
+          borderBottomRightRadius: isMine ? "0px" : "10px",
+          borderBottomLeftRadius: isMine ? "10px" : "0px",
+          color: "#1f2937"
+        }}
+      >
+        <div>{msg.content}</div>
+
+        <div
+          className="text-xs text-gray-500 mt-1"
+          style={{ textAlign: "right" }}
+        >
+          {time}
+        </div>
       </div>
     </div>
   );
