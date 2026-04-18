@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using AgenticServer.Hubs;
 using AgenticServer.Data;
+using AgenticServer.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -75,11 +76,25 @@ try
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
     db.Database.Migrate();
+
+    if (!db.Rooms.Any())
+    {
+        var generalRoom = new Room
+        {
+            Id = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+            Name = "General Chat",
+            IsPrivate = false
+        };
+
+        db.Rooms.Add(generalRoom);
+        db.SaveChanges();
+    }
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"Database migration failed: {ex.Message}");
+    Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
 }
 
 app.Run();
