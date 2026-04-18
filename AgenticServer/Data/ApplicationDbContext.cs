@@ -1,0 +1,60 @@
+using AgenticServer.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace AgenticServer.Data
+{
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Session> Sessions => Set<Session>();
+        public DbSet<Room> Rooms => Set<Room>();
+        public DbSet<RoomMember> RoomMembers => Set<RoomMember>();
+        public DbSet<Friendship> Friendships => Set<Friendship>();
+        public DbSet<Message> Messages => Set<Message>();
+        public DbSet<Attachment> Attachments => Set<Attachment>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Username)
+                .IsUnique();
+
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Room>()
+                .HasIndex(r => r.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<RoomMember>()
+                .HasKey(rm => new { rm.RoomId, rm.UserId });
+
+            modelBuilder.Entity<Friendship>()
+                .HasKey(f => new { f.UserId, f.FriendId });
+
+            modelBuilder.Entity<Message>()
+                .Property(m => m.Content)
+                .HasMaxLength(3072);
+
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.ReplyToMessage)
+                .WithMany()
+                .HasForeignKey(m => m.ReplyToMessageId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
+    }
+}
