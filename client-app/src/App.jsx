@@ -187,6 +187,18 @@ function Chat({ token, user, onLogout }) {
   const containerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
+  const handleCreateChannelClick = (e) => {
+    e.stopPropagation();
+    console.log("Button clicked");
+    setShowCreateModal(true);
+  };
+
+  const handleInviteMemberClick = (e) => {
+    e.stopPropagation();
+    console.log("Button clicked");
+    setShowInviteModal(true);
+  };
+
   const currentRoom = channels.find(c => c.id === currentRoomId);
   const isPrivateRoom = currentRoom?.isPrivate ?? !currentRoom?.isPublic;
 
@@ -453,8 +465,8 @@ function Chat({ token, user, onLogout }) {
         <div className="flex justify-between items-center mb-2">
           <div className="font-semibold">Channels</div>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="text-xs text-white px-2 py-1 rounded"
+            onClick={handleCreateChannelClick}
+            className="text-xs text-white px-2 py-1 rounded relative z-10"
             style={{ backgroundColor: "#6264a7" }}
           >
             +
@@ -537,8 +549,8 @@ function Chat({ token, user, onLogout }) {
             <div className="font-semibold">Members</div>
 
             <button
-              onClick={() => setShowInviteModal(true)}
-              className="text-xs text-white px-2 py-1 rounded"
+              onClick={handleInviteMemberClick}
+              className="text-xs text-white px-2 py-1 rounded relative z-10"
               style={{ backgroundColor: "#6264a7" }}
             >
               Invite
