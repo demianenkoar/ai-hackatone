@@ -132,7 +132,7 @@ function Chat({ token, onLogout }) {
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl("http://localhost:58097/chatHub", {
-        accessTokenFactory: () => token
+        accessTokenFactory: () => token || localStorage.getItem("jwt")
       })
       .withAutomaticReconnect()
       .build();
@@ -187,6 +187,7 @@ function Chat({ token, onLogout }) {
     if (connection) {
       connection.stop();
     }
+
     localStorage.removeItem("jwt");
     onLogout();
   };
