@@ -20,11 +20,23 @@ export default function ChatArea({
   const safeMessages = messages || [];
 
   useEffect(() => {
-    if (!channelId) return;
+    const token = localStorage.getItem("token");
+
+    if (!channelId || !token) return;
 
     async function fetchMessages() {
       try {
-        const res = await fetch(`/api/messages/${channelId}?limit=20`);
+        const res = await fetch(`/api/messages/${channelId}?limit=20`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) {
+          console.error("Message fetch failed:", res.status);
+          return;
+        }
+
         const data = await res.json();
         setMessages(data || []);
       } catch (err) {
@@ -32,10 +44,14 @@ export default function ChatArea({
       }
     }
 
+    // clear old messages immediately when switching channels
+    setMessages([]);
+
     fetchMessages();
 
     if (connectionRef?.current) {
-      connectionRef.current.invoke("JoinRoom", channelId)
+      connectionRef.current
+        .invoke("JoinRoom", channelId)
         .catch(err => console.error("JoinRoom error:", err));
     }
 
