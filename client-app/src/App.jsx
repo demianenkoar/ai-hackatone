@@ -8,7 +8,7 @@ import AuthPage from "./AuthPage";
 import CreateRoomModal from "./CreateRoomModal";
 import InviteMemberModal from "./InviteMemberModal";
 
-const API_BASE = "http://localhost:58097";
+const API_BASE = "https://localhost:58096";
 
 function decodeUser(token) {
   try {
@@ -37,9 +37,7 @@ function AppContent({ token, setToken }) {
   );
 
   const [channels, setChannels] = useState([]);
-
   const [messages, setMessages] = useState([]);
-
   const [text, setText] = useState("");
 
   const [showInviteModal, setShowInviteModal] = useState(false);

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 
+const API_BASE = "https://localhost:58096";
+
 export default function MessageList({ roomId }) {
   const [messages, setMessages] = useState([]);
   const [connection, setConnection] = useState(null);
@@ -11,7 +13,7 @@ export default function MessageList({ roomId }) {
     loadMessages();
 
     const conn = new signalR.HubConnectionBuilder()
-      .withUrl("/chatHub?username=reactUser")
+      .withUrl(`${API_BASE}/chatHub?username=reactUser`)
       .withAutomaticReconnect()
       .build();
 
@@ -43,7 +45,7 @@ export default function MessageList({ roomId }) {
 
     loadingRef.current = true;
 
-    let url = `/api/messages/${roomId}?limit=20`;
+    let url = `${API_BASE}/api/messages/${roomId}?limit=20`;
     if (before) {
       url += `&before=${encodeURIComponent(before)}`;
     }

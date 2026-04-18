@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 
+const API_BASE = "https://localhost:58096";
+
 export default function ChatArea({
   messages,
   setMessages,
@@ -27,7 +29,7 @@ export default function ChatArea({
 
     async function fetchMessages() {
       try {
-        const res = await fetch(`/api/messages/${channelId}?limit=20&t=${Date.now()}`, {
+        const res = await fetch(`${API_BASE}/api/messages/${channelId}?limit=20&t=${Date.now()}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
