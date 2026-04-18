@@ -84,8 +84,9 @@ try
         var generalRoom = new Room
         {
             Id = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
-            Name = "General Chat",
-            IsPrivate = false
+            Name = "General",
+            IsPrivate = false,
+            OwnerId = null
         };
 
         db.Rooms.Add(generalRoom);
