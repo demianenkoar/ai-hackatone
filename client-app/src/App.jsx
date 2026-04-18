@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
@@ -8,8 +9,6 @@ import CreateRoomModal from "./CreateRoomModal";
 import InviteMemberModal from "./InviteMemberModal";
 
 const API_BASE = "http://localhost:58097";
-const PAGE_SIZE = 20;
-const BOTTOM_THRESHOLD = 80;
 
 function decodeUser(token) {
   try {
@@ -32,8 +31,19 @@ function decodeUser(token) {
   }
 }
 
-function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
+function ChannelRoute({ setCurrentRoomId, children }) {
+  const { channelId } = useParams();
+
+  useEffect(() => {
+    if (channelId) {
+      setCurrentRoomId(channelId);
+    }
+  }, [channelId]);
+
+  return children;
+}
+
+function AppContent({ token, setToken }) {
   const [user, setUser] = useState(
     token ? decodeUser(token) : { id: null, username: "" }
   );
@@ -45,8 +55,6 @@ function App() {
   const [members, setMembers] = useState([]);
 
   const [text, setText] = useState("");
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -75,10 +83,6 @@ function App() {
     const data = await res.json();
 
     setChannels(data);
-
-    if (!currentRoomId && data.length > 0) {
-      setCurrentRoomId(data[0].id);
-    }
   };
 
   const createRoom = async () => {
@@ -160,28 +164,41 @@ function App() {
     setToken(null);
   };
 
-  if (!token) {
-    return <AuthPage setToken={setToken} />;
-  }
-
   return (
     <div className="w-full h-screen flex overflow-hidden bg-white">
 
       <Sidebar
         channels={channels}
         currentRoomId={currentRoomId}
-        setCurrentRoomId={setCurrentRoomId}
         user={user}
         onLogout={handleLogout}
         onCreateChannel={() => setShowCreateModal(true)}
       />
 
-      <ChatArea
-        messages={messages}
-        text={text}
-        setText={setText}
-        sendMessage={sendMessage}
-      />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            channels.length > 0
+              ? <Navigate to={`/channel/${channels[0].id}`} />
+              : <div className="flex-1 flex items-center justify-center">Select a channel</div>
+          }
+        />
+
+        <Route
+          path="/channel/:channelId"
+          element={
+            <ChannelRoute setCurrentRoomId={setCurrentRoomId}>
+              <ChatArea
+                messages={messages}
+                text={text}
+                setText={setText}
+                sendMessage={sendMessage}
+              />
+            </ChannelRoute>
+          }
+        />
+      </Routes>
 
       {showCreateModal && (
         <CreateRoomModal
@@ -201,6 +218,20 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  const [token, setToken] = useState(localStorage.getItem("token"));
+
+  if (!token) {
+    return <AuthPage setToken={setToken} />;
+  }
+
+  return (
+    <BrowserRouter>
+      <AppContent token={token} setToken={setToken} />
+    </BrowserRouter>
   );
 }
 
