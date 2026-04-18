@@ -43,6 +43,25 @@ export default function ChatArea({
   }, [channel]);
 
   useEffect(() => {
+    const connection = connectionRef?.current;
+    if (!connection) return;
+
+    const handler = (newMember) => {
+      setMembers(prev => {
+        const exists = prev.some(m => String(m.userId) === String(newMember.userId));
+        if (exists) return prev;
+        return [...prev, newMember];
+      });
+    };
+
+    connection.on("MemberAdded", handler);
+
+    return () => {
+      connection.off("MemberAdded", handler);
+    };
+  }, [connectionRef]);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
     if (!channelId || !token) return;
 

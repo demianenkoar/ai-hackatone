@@ -48,9 +48,17 @@ export default function InviteMemberModal({ roomId, inviteUser, close }) {
     setShowDropdown(false);
   }
 
-  function handleInvite() {
+  async function handleInvite() {
     if (!selectedUserId) return;
-    inviteUser(roomId, selectedUserId);
+
+    await inviteUser(roomId, selectedUserId);
+
+    setQuery("");
+    setResults([]);
+    setSelectedUserId(null);
+    setShowDropdown(false);
+
+    close();
   }
 
   return (

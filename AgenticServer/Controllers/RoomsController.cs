@@ -57,8 +57,8 @@ namespace AgenticServer.Controllers
                 .Include(m => m.User)
                 .Select(m => new
                 {
-                    m.UserId,
-                    Username = m.User.Username,
+                    userId = m.UserId,
+                    username = m.User.Username,
                     m.Role
                 })
                 .ToListAsync();
@@ -102,22 +102,39 @@ namespace AgenticServer.Controllers
             var exists = await _context.RoomMembers
                 .AnyAsync(m => m.RoomId == roomId && m.UserId == userId);
 
-            if (!exists)
+            if (exists)
             {
-                _context.RoomMembers.Add(new RoomMember
-                {
-                    RoomId = roomId,
-                    UserId = userId,
-                    Role = RoomRole.Member
-                });
-
-                await _context.SaveChangesAsync();
+                return BadRequest("User is already a member of this room.");
             }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var member = new RoomMember
+            {
+                RoomId = roomId,
+                UserId = userId,
+                Role = RoomRole.Member
+            };
+
+            _context.RoomMembers.Add(member);
+            await _context.SaveChangesAsync();
+
+            var dto = new
+            {
+                userId = user.Id,
+                username = user.Username,
+                role = member.Role
+            };
+
+            await _hub.Clients.Group(roomId.ToString())
+                .SendAsync("MemberAdded", dto);
 
             await _hub.Clients.User(userId.ToString())
                 .SendAsync("RoomAdded", roomId.ToString());
 
-            return Ok();
+            return Ok(dto);
         }
     }
 }
