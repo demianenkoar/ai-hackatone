@@ -51,36 +51,6 @@ namespace AgenticServer.Controllers
             _passwordHasher = new PasswordHasher<User>();
         }
 
-        [Authorize]
-        [HttpGet("/api/users/search")]
-        public async Task<IActionResult> SearchUsers([FromQuery] string query)
-        {
-            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
-                return Ok(new List<object>());
-
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            var q = query.Trim().ToLower();
-
-            var users = await _db.Users
-                .Where(u =>
-                    (u.Username.ToLower().Contains(q) ||
-                     u.Email.ToLower().Contains(q)) &&
-                    u.Id.ToString() != currentUserId
-                )
-                .OrderBy(u => u.Username)
-                .Take(10)
-                .Select(u => new
-                {
-                    id = u.Id,
-                    username = u.Username,
-                    email = u.Email
-                })
-                .ToListAsync();
-
-            return Ok(users);
-        }
-
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest input)
         {
