@@ -40,6 +40,18 @@ namespace AgenticServer.Data
             modelBuilder.Entity<Friendship>()
                 .HasKey(f => new { f.UserId, f.FriendId });
 
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.User)
+                .WithMany()
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.Friend)
+                .WithMany()
+                .HasForeignKey(f => f.FriendId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<Message>()
                 .Property(m => m.Content)
                 .HasMaxLength(3072);
