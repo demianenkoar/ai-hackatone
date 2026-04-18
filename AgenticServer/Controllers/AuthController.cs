@@ -6,11 +6,23 @@ using AgenticServer.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using BCrypt.Net;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Identity;
 
 namespace AgenticServer.Controllers
 {
+    public class LoginRequest
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+    }
+
+    public class RegisterRequest
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
@@ -18,65 +30,82 @@ namespace AgenticServer.Controllers
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _config;
         private readonly ILogger<AuthController> _logger;
+        private readonly PasswordHasher<User> _passwordHasher;
 
         public AuthController(ApplicationDbContext db, IConfiguration config, ILogger<AuthController> logger)
         {
             _db = db;
             _config = config;
             _logger = logger;
+            _passwordHasher = new PasswordHasher<User>();
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] User input)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest input)
         {
-            if (string.IsNullOrWhiteSpace(input.Username) || string.IsNullOrWhiteSpace(input.PasswordHash))
+            if (string.IsNullOrWhiteSpace(input.Email) || string.IsNullOrWhiteSpace(input.Password))
             {
-                _logger.LogWarning("Registration failed due to empty username or password");
-                return BadRequest("Username and password are required");
+                _logger.LogWarning("Registration failed due to empty email or password");
+                return BadRequest("Email and password are required");
             }
 
-            if (await _db.Users.AnyAsync(x => x.Username == input.Username))
+            var normalizedEmail = input.Email.Trim().ToLower();
+
+            if (await _db.Users.AnyAsync(x => x.Username.ToLower() == normalizedEmail))
             {
-                _logger.LogWarning("Registration attempt with existing username: {Username}", input.Username);
-                return BadRequest("Username already exists");
+                _logger.LogWarning("Registration attempt with existing email: {Email}", normalizedEmail);
+                return BadRequest("User already exists");
             }
 
-            input.Id = Guid.NewGuid();
-            input.PasswordHash = BCrypt.Net.BCrypt.HashPassword(input.PasswordHash);
-            input.CreatedAt = DateTime.UtcNow;
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Username = normalizedEmail,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            _db.Users.Add(input);
+            user.PasswordHash = _passwordHasher.HashPassword(user, input.Password);
+
+            _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            _logger.LogInformation("User registered successfully: {Username}", input.Username);
+            _logger.LogInformation("User registered successfully: {Email}", normalizedEmail);
 
             return Ok();
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] User input)
+        public async Task<IActionResult> Login([FromBody] LoginRequest input)
         {
-            if (string.IsNullOrWhiteSpace(input.Username) || string.IsNullOrWhiteSpace(input.PasswordHash))
+            if (string.IsNullOrWhiteSpace(input.Email) || string.IsNullOrWhiteSpace(input.Password))
             {
-                _logger.LogWarning("Login failed due to empty username or password");
+                _logger.LogWarning("Login failed due to empty email or password");
                 return Unauthorized();
             }
 
-            _logger.LogInformation("Attempting login for: {Username}", input.Username);
+            var normalizedEmail = input.Email.Trim().ToLower();
 
-            var user = await _db.Users.FirstOrDefaultAsync(x => x.Username == input.Username);
+            _logger.LogInformation("Attempting login for: {Email}", normalizedEmail);
+
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == normalizedEmail);
 
             if (user == null)
             {
-                _logger.LogWarning("User not found: {Username}", input.Username);
+                _logger.LogWarning("User not found: {Email}", normalizedEmail);
                 return Unauthorized();
             }
 
-            var passwordValid = BCrypt.Net.BCrypt.Verify(input.PasswordHash, user.PasswordHash);
+            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, input.Password);
+            var isPasswordValid = result == PasswordVerificationResult.Success;
 
-            if (!passwordValid)
+            _logger.LogInformation(
+                "Login attempt for {Email}. Password matches: {Result}",
+                normalizedEmail,
+                isPasswordValid
+            );
+
+            if (!isPasswordValid)
             {
-                _logger.LogWarning("Invalid password for user: {Username}", input.Username);
                 return Unauthorized();
             }
 
@@ -97,7 +126,7 @@ namespace AgenticServer.Controllers
 
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
-            _logger.LogInformation("Login successful for user: {Username}", user.Username);
+            _logger.LogInformation("Login successful for user: {Email}", normalizedEmail);
 
             return Ok(new { token = jwt });
         }

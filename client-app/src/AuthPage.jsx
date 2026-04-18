@@ -6,16 +6,15 @@ export default function AuthPage({ setToken }) {
   const [isRegistering, setIsRegistering] = useState(false);
 
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const [message, setMessage] = useState("");
 
   const login = async () => {
-    const normalized = (username || email).trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!normalized || !password) {
-      setMessage("Username/email and password are required");
+    if (!normalizedEmail || !password) {
+      setMessage("Email and password are required");
       return;
     }
 
@@ -25,12 +24,12 @@ export default function AuthPage({ setToken }) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        username: normalized,
-        passwordHash: password
+        email: normalizedEmail,
+        password: password
       })
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     console.log("Login response:", data);
 
@@ -40,7 +39,7 @@ export default function AuthPage({ setToken }) {
       return;
     }
 
-    const token = data.token || data.accessToken || data.jwt;
+    const token = data.token;
 
     if (!token) {
       console.error("No token found in login response");
@@ -56,10 +55,10 @@ export default function AuthPage({ setToken }) {
   };
 
   const register = async () => {
-    const normalized = (username || email).trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!normalized || !password) {
-      setMessage("Username/email and password are required");
+    if (!normalizedEmail || !password) {
+      setMessage("Email and password are required");
       return;
     }
 
@@ -69,8 +68,8 @@ export default function AuthPage({ setToken }) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        username: normalized,
-        passwordHash: password
+        email: normalizedEmail,
+        password: password
       })
     });
 
@@ -97,25 +96,16 @@ export default function AuthPage({ setToken }) {
 
   return (
     <div className="w-full h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white p-8 rounded shadow w-80 border border-[#e1dfdd] min-h-[320px] flex flex-col">
+      <div className="bg-white p-8 rounded shadow w-80 border border-[#e1dfdd] min-h-[300px] flex flex-col">
 
         <h2 className="text-xl font-semibold mb-4">
           {isRegistering ? "Create account" : "Sign in"}
         </h2>
 
-        {isRegistering && (
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            className="w-full border px-3 py-2 rounded mb-3"
-          />
-        )}
-
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email (optional)"
+          placeholder="Email"
           className="w-full border px-3 py-2 rounded mb-3"
         />
 
