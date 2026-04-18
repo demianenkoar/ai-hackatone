@@ -6,17 +6,14 @@ const API_BASE = "http://localhost:58097";
 export default function App() {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
-
   const [messages, setMessages] = useState([]);
   const [oldestTimestamp, setOldestTimestamp] = useState(null);
-
   const [messageText, setMessageText] = useState("");
 
+  const connectionRef = useRef(null);
+  const selectedChannelRef = useRef(null);
   const messageContainerRef = useRef(null);
   const loadingRef = useRef(false);
-  const connectionRef = useRef(null);
-  const connectionReadyRef = useRef(null);
-  const selectedChannelRef = useRef(null);
 
   useEffect(() => {
     selectedChannelRef.current = selectedChannel;
@@ -35,45 +32,49 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!connectionRef.current) {
-      const conn = new signalR.HubConnectionBuilder()
-        .withUrl(`${API_BASE}/chatHub`)
-        .withAutomaticReconnect()
-        .build();
-
-      const receiveHandler = (message) => {
-        console.log("SignalR: Received message", message);
-
-        if (!message || message.roomId !== selectedChannelRef.current) {
-          return;
-        }
-
-        setMessages(prev => [...prev, message]);
-
-        setTimeout(() => {
-          const el = messageContainerRef.current;
-          if (el) el.scrollTop = el.scrollHeight;
-        }, 50);
-      };
-
-      conn.on("ReceiveMessage", receiveHandler);
-
-      connectionRef.current = conn;
-
-      connectionReadyRef.current = conn
-        .start()
-        .then(() => {
-          console.log("SignalR connected");
-        })
-        .catch(err => {
-          console.error("SignalR connection error:", err);
-        });
+    if (connectionRef.current) {
+      const state = connectionRef.current.state;
+      if (
+        state === signalR.HubConnectionState.Connected ||
+        state === signalR.HubConnectionState.Connecting
+      ) {
+        return;
+      }
     }
 
-    const connection = connectionRef.current;
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${API_BASE}/chatHub`)
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on("ReceiveMessage", (message) => {
+      console.log("SignalR: Received message", message);
+
+      if (!message) return;
+      if (message.roomId !== selectedChannelRef.current) return;
+
+      setMessages(prev => [...prev, message]);
+
+      setTimeout(() => {
+        const el = messageContainerRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      }, 50);
+    });
+
+    connectionRef.current = connection;
+
+    connection
+      .start()
+      .then(() => {
+        console.log("SignalR connected");
+        if (selectedChannelRef.current) {
+          connection.invoke("JoinRoom", selectedChannelRef.current);
+        }
+      })
+      .catch(err => console.error("SignalR start error:", err));
 
     return () => {
-      if (connection) {
+      if (connection.state === signalR.HubConnectionState.Connected) {
         connection.stop();
       }
     };
@@ -85,20 +86,18 @@ export default function App() {
     setMessages([]);
     setOldestTimestamp(null);
 
-    const joinRoom = async () => {
-      const connection = connectionRef.current;
+    const connection = connectionRef.current;
 
+    const joinRoom = async () => {
       if (!connection) return;
 
-      try {
-        await connectionReadyRef.current;
-
-        if (connection.state === signalR.HubConnectionState.Connected) {
+      if (connection.state === signalR.HubConnectionState.Connected) {
+        try {
           await connection.invoke("JoinRoom", selectedChannel);
           console.log("Joined room", selectedChannel);
+        } catch (err) {
+          console.error("JoinRoom failed:", err);
         }
-      } catch (err) {
-        console.error("JoinRoom failed:", err);
       }
     };
 
@@ -108,6 +107,7 @@ export default function App() {
       .then(r => r.json())
       .then(data => {
         setMessages(data);
+
         if (data.length > 0) {
           setOldestTimestamp(data[0].timestamp);
         }
@@ -155,7 +155,9 @@ export default function App() {
   const sendMessage = async () => {
     const connection = connectionRef.current;
 
-    if (!connection || !selectedChannel || !messageText.trim()) return;
+    if (!connection) return;
+    if (connection.state !== signalR.HubConnectionState.Connected) return;
+    if (!selectedChannel || !messageText.trim()) return;
 
     try {
       await connection.invoke("SendMessage", selectedChannel, messageText);
