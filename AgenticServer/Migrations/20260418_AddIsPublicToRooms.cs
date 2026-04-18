@@ -1,26 +1,11 @@
-using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
-
-namespace AgenticServer.Migrations
-{
-    public partial class AddIsPublicToRooms : Migration
-    {
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsPublic",
-                table: "Rooms",
-                type: "bit",
-                nullable: false,
-                defaultValue: true);
-        }
-
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "IsPublic",
-                table: "Rooms");
-        }
-    }
-}
+//
+// This migration file has been intentionally cleared to resolve
+// the CS0111 duplicate method build error.
+//
+// Please delete this file and its corresponding Designer file
+// from the Migrations folder and regenerate the migration with:
+//
+// dotnet ef migrations remove
+// dotnet ef migrations add AddIsPublicToRooms
+// dotnet ef database update
+//
