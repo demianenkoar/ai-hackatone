@@ -10,11 +10,11 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [oldestTimestamp, setOldestTimestamp] = useState(null);
 
-  const [connection, setConnection] = useState(null);
   const [messageText, setMessageText] = useState("");
 
   const messageContainerRef = useRef(null);
   const loadingRef = useRef(false);
+  const connectionRef = useRef(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/channels`)
@@ -29,30 +29,41 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const conn = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE}/chatHub`)
-      .withAutomaticReconnect()
-      .build();
+    if (!connectionRef.current) {
+      const conn = new signalR.HubConnectionBuilder()
+        .withUrl(`${API_BASE}/chatHub`)
+        .withAutomaticReconnect()
+        .build();
 
-    conn.on("ReceiveMessage", (id, roomId, senderId, content, timestamp) => {
-      setMessages(prev => [
-        ...prev,
-        { id, roomId, senderId, content, timestamp }
-      ]);
+      conn.on("ReceiveMessage", (id, roomId, senderId, content, timestamp) => {
+        setMessages(prev => [
+          ...prev,
+          { id, roomId, senderId, content, timestamp }
+        ]);
 
-      setTimeout(() => {
-        const el = messageContainerRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
-      }, 50);
-    });
+        setTimeout(() => {
+          const el = messageContainerRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 50);
+      });
 
-    conn.start()
-      .then(() => console.log("SignalR connected"))
-      .catch(err => console.error("SignalR connection error", err));
+      connectionRef.current = conn;
+    }
 
-    setConnection(conn);
+    const connection = connectionRef.current;
 
-    return () => conn.stop();
+    if (connection && connection.state === signalR.HubConnectionState.Disconnected) {
+      connection
+        .start()
+        .then(() => console.log("SignalR connected"))
+        .catch(err => console.error("SignalR connection error", err));
+    }
+
+    return () => {
+      if (connection && connection.state === signalR.HubConnectionState.Connected) {
+        connection.stop();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -110,6 +121,8 @@ export default function App() {
   };
 
   const sendMessage = async () => {
+    const connection = connectionRef.current;
+
     if (!connection || !selectedChannel || !messageText.trim()) return;
 
     try {
