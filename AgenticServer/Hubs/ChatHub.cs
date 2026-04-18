@@ -37,19 +37,23 @@ namespace AgenticServer.Hubs
             await base.OnConnectedAsync();
         }
 
-        public async Task JoinRoom(Guid roomId)
+        public async Task JoinRoom(string roomId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
+            Console.WriteLine($"SignalR: connection {Context.ConnectionId} joining room {roomId}");
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         }
 
-        public async Task SendMessage(Guid roomId, string content)
+        public async Task SendMessage(string roomId, string content)
         {
             var senderId = ResolveUserId();
+
+            var parsedRoomId = Guid.Parse(roomId);
 
             var message = new Message
             {
                 Id = Guid.NewGuid(),
-                RoomId = roomId,
+                RoomId = parsedRoomId,
                 SenderId = senderId,
                 Content = content,
                 Timestamp = DateTime.UtcNow
@@ -60,7 +64,7 @@ namespace AgenticServer.Hubs
 
             var sender = await _db.Users.FindAsync(senderId);
 
-            await Clients.Group(roomId.ToString()).SendAsync("ReceiveMessage", new
+            var dto = new
             {
                 id = message.Id,
                 roomId = message.RoomId,
@@ -68,7 +72,11 @@ namespace AgenticServer.Hubs
                 senderName = sender?.Username ?? "Unknown",
                 content = message.Content,
                 timestamp = message.Timestamp
-            });
+            };
+
+            Console.WriteLine($"SignalR: broadcasting message to room {roomId}");
+
+            await Clients.Group(roomId).SendAsync("ReceiveMessage", dto);
         }
 
         public async Task SendTypingNotification(string roomId, bool isTyping)

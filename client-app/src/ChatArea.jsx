@@ -54,11 +54,13 @@ export default function ChatArea({
 
         if (cancelled) return;
 
-        console.log("SignalR: joining room", channelId);
+        const roomId = String(channelId);
 
-        await connection.invoke("JoinRoom", channelId);
+        console.log("SignalR: attempting JoinRoom with id =", roomId);
 
-        console.log("SignalR: joined room", channelId);
+        await connection.invoke("JoinRoom", roomId);
+
+        console.log("SignalR: joined room", roomId);
 
       } catch (err) {
         console.error("JoinRoom failed", err);
