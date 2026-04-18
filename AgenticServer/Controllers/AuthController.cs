@@ -6,6 +6,7 @@ using AgenticServer.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using BCrypt.Net;
 
 namespace AgenticServer.Controllers
 {
@@ -43,7 +44,12 @@ namespace AgenticServer.Controllers
         {
             var user = await _db.Users.FirstOrDefaultAsync(x => x.Username == input.Username);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(input.PasswordHash, user.PasswordHash))
+            if (user == null)
+                return Unauthorized();
+
+            var passwordValid = BCrypt.Net.BCrypt.Verify(input.PasswordHash, user.PasswordHash);
+
+            if (!passwordValid)
                 return Unauthorized();
 
             var claims = new[]
