@@ -31,6 +31,17 @@ export default function ChatArea({
   const [showInvite, setShowInvite] = useState(false);
   const [channel, setChannel] = useState(null);
 
+  const isPrivateChannel =
+    !channel ||
+    channel?.isPrivate ||
+    channel?.type === "private" ||
+    channel?.privacy === 1 ||
+    channel?.isPublic === false;
+
+  useEffect(() => {
+    console.log("Current Channel Data:", channel);
+  }, [channel]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!channelId || !token) return;
@@ -63,7 +74,7 @@ export default function ChatArea({
       setMembers(data);
     }
 
-    if (channel?.isPrivate === true) {
+    if (isPrivateChannel) {
       fetchMembers();
     }
 
@@ -189,17 +200,29 @@ export default function ChatArea({
 
           <div className="flex gap-2">
 
-            {channel?.isPrivate === true && (
+            {isPrivateChannel && (
               <button
                 onClick={() => setShowInvite(true)}
-                className="text-white px-3 py-1 rounded text-sm"
-                style={{ backgroundColor: "#6264a7" }}
+                className="px-3 py-1 rounded text-sm border transition-colors"
+                style={{
+                  borderColor: "#6264a7",
+                  color: "#6264a7",
+                  background: "transparent"
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = "#6264a7";
+                  e.target.style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "transparent";
+                  e.target.style.color = "#6264a7";
+                }}
               >
-                Invite Member
+                Invite
               </button>
             )}
 
-            {channel?.isPrivate === true && (
+            {isPrivateChannel && (
               <button
                 onClick={() => setShowMembers(!showMembers)}
                 className="text-xs bg-white text-black px-2 py-1 rounded"
@@ -232,7 +255,7 @@ export default function ChatArea({
 
       </div>
 
-      {showMembers && channel?.isPrivate === true && (
+      {showMembers && isPrivateChannel && (
         <div className="w-64 border-l bg-white p-4 overflow-y-auto">
 
           <div className="font-semibold mb-3">
