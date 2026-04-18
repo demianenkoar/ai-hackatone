@@ -195,44 +195,16 @@ export default function ChatArea({
       <div className="flex-1 flex flex-col">
 
         <div className="teams-header p-3 font-semibold flex justify-between items-center">
-
           <span>Chat</span>
 
-          <div className="flex gap-2">
-
-            {isPrivateChannel && (
-              <button
-                onClick={() => setShowInvite(true)}
-                className="px-3 py-1 rounded text-sm border transition-colors"
-                style={{
-                  borderColor: "#6264a7",
-                  color: "#6264a7",
-                  background: "transparent"
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "#6264a7";
-                  e.target.style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "transparent";
-                  e.target.style.color = "#6264a7";
-                }}
-              >
-                Invite
-              </button>
-            )}
-
-            {isPrivateChannel && (
-              <button
-                onClick={() => setShowMembers(!showMembers)}
-                className="text-xs bg-white text-black px-2 py-1 rounded"
-              >
-                Members
-              </button>
-            )}
-
-          </div>
-
+          {isPrivateChannel && (
+            <button
+              onClick={() => setShowMembers(!showMembers)}
+              className="text-xs bg-white text-black px-2 py-1 rounded"
+            >
+              Members
+            </button>
+          )}
         </div>
 
         <div
@@ -256,23 +228,41 @@ export default function ChatArea({
       </div>
 
       {showMembers && isPrivateChannel && (
-        <div className="w-64 border-l bg-white p-4 overflow-y-auto">
+        <div className="w-64 border-l bg-white flex flex-col">
 
-          <div className="font-semibold mb-3">
-            Members
+          <div className="p-4 border-b">
+            <div className="font-semibold mb-3">
+              Members
+            </div>
+
+            <button
+              onClick={() => setShowInvite(true)}
+              className="w-full flex items-center justify-center gap-2 text-sm border rounded py-2"
+              style={{
+                borderColor: "#6264a7",
+                color: "#6264a7",
+                background: "transparent"
+              }}
+            >
+              + Add people
+            </button>
           </div>
 
-          {members.map(m => (
-            <div key={m.id} className="flex items-center gap-2 mb-2">
+          <div className="flex-1 overflow-y-auto p-4">
 
-              <div className="avatar">
-                {m.username?.charAt(0).toUpperCase()}
+            {members.map(m => (
+              <div key={m.id} className="flex items-center gap-2 mb-2">
+
+                <div className="avatar">
+                  {m.username?.charAt(0).toUpperCase()}
+                </div>
+
+                <span className="text-sm">{m.username}</span>
+
               </div>
+            ))}
 
-              <span className="text-sm">{m.username}</span>
-
-            </div>
-          ))}
+          </div>
 
         </div>
       )}
