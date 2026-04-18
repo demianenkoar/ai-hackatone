@@ -76,7 +76,6 @@ function AppContent({ token, setToken }) {
 
   const loadChannels = async () => {
     const res = await safeFetch(`${API_BASE}/api/channels`);
-
     if (!res) return;
 
     const data = await res.json();
@@ -106,9 +105,7 @@ function AppContent({ token, setToken }) {
   const inviteUser = async (roomId, userId) => {
     const res = await safeFetch(
       `${API_BASE}/api/rooms/${roomId}/add-user/${userId}`,
-      {
-        method: "POST"
-      }
+      { method: "POST" }
     );
 
     if (!res) return;
@@ -130,15 +127,35 @@ function AppContent({ token, setToken }) {
       .withAutomaticReconnect()
       .build();
 
-    connection.on("ReceiveMessage", (msg) => {
-      setMessages(prev => [...prev, msg]);
+    console.log("SignalR: registering ReceiveMessage listener");
+
+    connection.on("ReceiveMessage", (message) => {
+      console.log("SignalR: Received message", message);
+
+      if (!message) return;
+
+      setMessages((prev) => {
+        const exists = prev.some((m) => m.id === message.id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
     });
 
-    connection.start();
+    connection
+      .start()
+      .then(() => {
+        console.log("SignalR: Connected to chat hub");
+      })
+      .catch((err) => {
+        console.error("SignalR connection error:", err);
+      });
 
     connectionRef.current = connection;
 
-    return () => connection.stop();
+    return () => {
+      connection.off("ReceiveMessage");
+      connection.stop();
+    };
   }, [token]);
 
   const sendMessage = async () => {
@@ -148,10 +165,14 @@ function AppContent({ token, setToken }) {
     const parts = path.split("/");
     const roomId = parts[2];
 
-    if (!roomId) return;
+    if (!roomId || !connectionRef.current) return;
 
-    await connectionRef.current.invoke("SendMessage", roomId, text);
-    setText("");
+    try {
+      await connectionRef.current.invoke("SendMessage", roomId, text);
+      setText("");
+    } catch (err) {
+      console.error("Send failed:", err);
+    }
   };
 
   const handleLogout = () => {
