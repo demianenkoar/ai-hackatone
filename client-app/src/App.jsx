@@ -4,17 +4,24 @@ import * as signalR from "@microsoft/signalr";
 const API_BASE = "http://localhost:58097";
 const PAGE_SIZE = 20;
 
-function decodeUserId(token) {
+function decodeUser(token) {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return (
+    const id =
       payload.nameid ||
       payload.sub ||
       payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ||
-      null
-    );
+      null;
+
+    const username =
+      payload.unique_name ||
+      payload.name ||
+      payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ||
+      "User";
+
+    return { id, username };
   } catch {
-    return null;
+    return { id: null, username: "User" };
   }
 }
 
@@ -141,7 +148,7 @@ function AuthForm({ onLogin }) {
   );
 }
 
-function Chat({ token, currentUserId, onLogout }) {
+function Chat({ token, currentUserId, currentUsername, onLogout }) {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -151,6 +158,7 @@ function Chat({ token, currentUserId, onLogout }) {
 
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/channels`)
@@ -161,12 +169,9 @@ function Chat({ token, currentUserId, onLogout }) {
       });
   }, []);
 
-  const scrollToBottom = () => {
-    const container = containerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const loadMoreMessages = async () => {
     if (!hasMore || loadingMore || messages.length === 0) return;
@@ -217,7 +222,6 @@ function Chat({ token, currentUserId, onLogout }) {
       .then(r => r.json())
       .then(data => {
         setMessages(data);
-        setTimeout(scrollToBottom, 50);
       });
 
   }, [selectedChannel]);
@@ -235,7 +239,6 @@ function Chat({ token, currentUserId, onLogout }) {
     connection.on("ReceiveMessage", (msg) => {
       if (msg.roomId !== selectedChannel) return;
       setMessages(prev => [...prev, msg]);
-      setTimeout(scrollToBottom, 50);
     });
 
     connection.start().then(() => {
@@ -260,19 +263,16 @@ function Chat({ token, currentUserId, onLogout }) {
   };
 
   return (
-    <div className="h-screen flex">
-      <div className="w-60 bg-slate-100 border-r border-slate-200 p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold">Channels</h3>
-          <button
-            onClick={onLogout}
-            className="text-sm text-red-500"
-          >
-            Logout
-          </button>
+    <div className="w-full h-screen flex overflow-hidden">
+      <div className="w-64 bg-slate-100 border-r border-slate-200 p-4 flex flex-col">
+        <div className="mb-4">
+          <div className="font-semibold">Channels</div>
+          <div className="text-xs text-slate-500">
+            Logged in as: {currentUsername}
+          </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1">
           {channels.map(c => (
             <div
               key={c.id}
@@ -287,46 +287,54 @@ function Chat({ token, currentUserId, onLogout }) {
             </div>
           ))}
         </div>
+
+        <button
+          onClick={onLogout}
+          className="text-sm text-red-500 mt-4"
+        >
+          Logout
+        </button>
       </div>
 
-      <div className="flex flex-col flex-1 bg-white">
+      <div className="flex-1 flex flex-col bg-white">
         <div
           id="message-container"
           ref={containerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+          className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4"
         >
           {messages.map(msg => {
             const mine = msg.senderId === currentUserId;
 
             return (
-              <div
-                key={msg.id}
-                className={`flex flex-col max-w-xs ${
-                  mine ? "self-end items-end" : "self-start items-start"
-                }`}
-              >
-                <div
-                  className={
-                    mine
-                      ? "bg-blue-600 text-white self-end rounded-2xl rounded-tr-none px-4 py-2 shadow-sm"
-                      : "bg-white border border-slate-200 text-slate-800 self-start rounded-2xl rounded-tl-none px-4 py-2 shadow-sm"
-                  }
-                >
-                  {!mine && (
-                    <div className="text-[11px] opacity-70 mb-1">
-                      {msg.senderName}
-                    </div>
-                  )}
-                  {msg.content}
+              <div key={msg.id} className="w-full flex">
+                <div className={mine ? "w-full flex justify-end" : "w-full flex justify-start"}>
+                  <div className="max-w-xs flex flex-col">
+                    {!mine && (
+                      <div className="text-[11px] text-slate-500 mb-1">
+                        {msg.senderName}
+                      </div>
+                    )}
 
-                  <div className="text-[10px] opacity-70 mt-1">
-                    {formatTime(msg.timestamp)}
+                    <div
+                      className={
+                        mine
+                          ? "bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-2 shadow-sm"
+                          : "bg-slate-200 text-black rounded-2xl rounded-tl-none px-4 py-2 shadow-sm"
+                      }
+                    >
+                      {msg.content}
+                      <div className="text-[10px] opacity-70 mt-1">
+                        {formatTime(msg.timestamp)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
+
+          <div ref={messagesEndRef} />
         </div>
 
         <div className="border-t border-slate-200 p-3 flex gap-2">
@@ -354,19 +362,19 @@ function Chat({ token, currentUserId, onLogout }) {
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt"));
-  const [currentUserId, setCurrentUserId] = useState(
-    token ? decodeUserId(token) : null
+  const [user, setUser] = useState(
+    token ? decodeUser(token) : { id: null, username: "" }
   );
 
   const handleLogin = (t) => {
     setToken(t);
-    setCurrentUserId(decodeUserId(t));
+    setUser(decodeUser(t));
   };
 
   const handleLogout = () => {
     localStorage.removeItem("jwt");
     setToken(null);
-    setCurrentUserId(null);
+    setUser({ id: null, username: "" });
   };
 
   if (!token) {
@@ -376,7 +384,8 @@ export default function App() {
   return (
     <Chat
       token={token}
-      currentUserId={currentUserId}
+      currentUserId={user.id}
+      currentUsername={user.username}
       onLogout={handleLogout}
     />
   );
