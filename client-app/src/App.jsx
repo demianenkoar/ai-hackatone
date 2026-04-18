@@ -113,6 +113,39 @@ function Chat({ token, onLogout }) {
 
   const connectionRef = useRef(null);
   const selectedChannelRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const formatTimestamp = (ts) => {
+    const date = new Date(ts);
+    const now = new Date();
+
+    const sameDay =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    if (sameDay) {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      });
+    }
+
+    return date.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+  };
 
   useEffect(() => {
     selectedChannelRef.current = selectedChannel;
@@ -140,6 +173,7 @@ function Chat({ token, onLogout }) {
     connection.on("ReceiveMessage", (message) => {
       if (message.roomId !== selectedChannelRef.current) return;
       setMessages(prev => [...prev, message]);
+      setTimeout(scrollToBottom, 50);
     });
 
     connection.start().then(() => {
@@ -160,7 +194,10 @@ function Chat({ token, onLogout }) {
 
     fetch(`${API_BASE}/api/messages/${selectedChannel}`)
       .then(r => r.json())
-      .then(data => setMessages(data));
+      .then(data => {
+        setMessages(data);
+        setTimeout(scrollToBottom, 50);
+      });
 
     const connection = connectionRef.current;
 
@@ -217,12 +254,13 @@ function Chat({ token, onLogout }) {
                 key={m.id}
                 style={{
                   ...styles.messageRow,
-                  justifyContent: isMe ? "flex-end" : "flex-start"
+                  alignItems: isMe ? "flex-end" : "flex-start"
                 }}
               >
                 <div
                   style={{
                     ...styles.bubble,
+                    alignSelf: isMe ? "flex-end" : "flex-start",
                     background: isMe ? "#3b82f6" : "#e5e7eb",
                     color: isMe ? "white" : "black"
                   }}
@@ -232,9 +270,20 @@ function Chat({ token, onLogout }) {
                   )}
                   {m.content}
                 </div>
+
+                <div
+                  style={{
+                    ...styles.timestamp,
+                    textAlign: isMe ? "right" : "left",
+                    alignSelf: isMe ? "flex-end" : "flex-start"
+                  }}
+                >
+                  {formatTimestamp(m.timestamp)}
+                </div>
               </div>
             );
           })}
+          <div ref={messagesEndRef} />
         </div>
 
         <div style={styles.inputBar}>
@@ -369,7 +418,7 @@ const styles = {
 
   messageRow: {
     display: "flex",
-    width: "100%",
+    flexDirection: "column",
     margin: "5px 0"
   },
 
@@ -383,6 +432,12 @@ const styles = {
     fontSize: 12,
     opacity: 0.7,
     marginBottom: 3
+  },
+
+  timestamp: {
+    fontSize: "0.75rem",
+    opacity: 0.7,
+    marginTop: 2
   },
 
   inputBar: {
