@@ -41,11 +41,29 @@ namespace AgenticServer.Controllers
                 {
                     r.Id,
                     r.Name,
-                    r.IsPublic
+                    r.IsPublic,
+                    r.IsPrivate
                 })
                 .ToListAsync();
 
             return Ok(rooms);
+        }
+
+        [HttpGet("{roomId}/members")]
+        public async Task<IActionResult> GetMembers(Guid roomId)
+        {
+            var members = await _context.RoomMembers
+                .Where(m => m.RoomId == roomId)
+                .Include(m => m.User)
+                .Select(m => new
+                {
+                    m.UserId,
+                    Username = m.User.Username,
+                    m.Role
+                })
+                .ToListAsync();
+
+            return Ok(members);
         }
 
         [HttpPost]

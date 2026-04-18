@@ -30,14 +30,11 @@ function Chat({ token, user, onLogout }) {
   const [channels, setChannels] = useState([]);
   const [currentRoomId, setCurrentRoomId] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
+  const [members, setMembers] = useState([]);
 
+  const [text, setText] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRoomName, setNewRoomName] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,92 +43,57 @@ function Chat({ token, user, onLogout }) {
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
 
-  const isNearBottom = () => {
-    const container = containerRef.current;
-    if (!container) return false;
+  const currentRoom = channels.find(c => c.id === currentRoomId);
+  const isPrivateRoom = currentRoom?.isPrivate ?? !currentRoom?.isPublic;
 
-    return (
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      BOTTOM_THRESHOLD
-    );
-  };
-
-  const scrollToBottom = () => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    container.scrollTop = container.scrollHeight;
+  const safeFetch = async (url, options = {}) => {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+      console.warn("Unauthorized request:", url);
+      return null;
+    }
+    return res;
   };
 
   const loadChannels = async () => {
-    const res = await fetch(`${API_BASE}/api/channels`, {
+    const res = await safeFetch(`${API_BASE}/api/channels`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
+    if (!res) return;
 
     const data = await res.json();
     setChannels(data);
 
     if (!currentRoomId && data.length > 0) {
-      const general = data.find(r => r.title?.toLowerCase() === "general");
-      if (general) {
-        setCurrentRoomId(general.id);
-      } else {
-        setCurrentRoomId(data[0].id);
-      }
+      setCurrentRoomId(data[0].id);
     }
+  };
+
+  const loadMembers = async (roomId) => {
+    if (!roomId) return;
+
+    const res = await safeFetch(`${API_BASE}/api/rooms/${roomId}/members`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res) return;
+
+    const data = await res.json();
+    setMembers(data);
   };
 
   const loadMessages = async (roomId) => {
-    if (!roomId) return;
-
     const res = await fetch(`${API_BASE}/api/messages/${roomId}`);
     const data = await res.json();
-
     setMessages(data);
     setHasMore(data.length === PAGE_SIZE);
-
     setTimeout(scrollToBottom, 50);
   };
 
-  const loadMoreMessages = async () => {
-    if (!currentRoomId) return;
-    if (!hasMore || loadingMore || messages.length === 0) return;
-
-    setLoadingMore(true);
-
-    const oldest = messages[0];
-    const container = containerRef.current;
-    const prevHeight = container ? container.scrollHeight : 0;
-
-    const res = await fetch(
-      `${API_BASE}/api/messages/${currentRoomId}?before=${encodeURIComponent(oldest.timestamp)}`
-    );
-
-    const older = await res.json();
-
-    if (older.length < PAGE_SIZE) {
-      setHasMore(false);
-    }
-
-    setMessages(prev => [...older, ...prev]);
-
-    setTimeout(() => {
-      if (container) {
-        const newHeight = container.scrollHeight;
-        container.scrollTop = newHeight - prevHeight;
-      }
-    }, 0);
-
-    setLoadingMore(false);
-  };
-
-  const handleScroll = () => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (container.scrollTop === 0) {
-      loadMoreMessages();
-    }
+  const scrollToBottom = () => {
+    const c = containerRef.current;
+    if (c) c.scrollTop = c.scrollHeight;
   };
 
   const searchUsers = async (query) => {
@@ -142,66 +104,35 @@ function Chat({ token, user, onLogout }) {
       return;
     }
 
-    const res = await fetch(
+    const res = await safeFetch(
       `${API_BASE}/api/users/search?query=${encodeURIComponent(query)}`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       }
     );
 
-    if (res.status === 401) {
-      console.warn("Unauthorized request while searching users");
-      return;
-    }
+    if (!res) return;
 
     const data = await res.json();
     setSearchResults(data);
   };
 
   const inviteUser = async (userId) => {
-    const res = await fetch(
+    const res = await safeFetch(
       `${API_BASE}/api/rooms/${currentRoomId}/add-user/${userId}`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       }
     );
 
-    if (res.status === 401) {
-      console.warn("Unauthorized invite attempt");
-      return;
-    }
+    if (!res) return;
 
     alert("User added");
     setShowInviteModal(false);
     setSearchResults([]);
     setSearchQuery("");
-  };
-
-  const createChannel = async () => {
-    if (!newRoomName.trim()) return;
-
-    await fetch(`${API_BASE}/api/rooms`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        name: newRoomName,
-        isPublic
-      })
-    });
-
-    setShowCreateModal(false);
-    setNewRoomName("");
-    setIsPublic(true);
-
-    await loadChannels();
+    loadMembers(currentRoomId);
   };
 
   useEffect(() => {
@@ -211,9 +142,10 @@ function Chat({ token, user, onLogout }) {
   useEffect(() => {
     if (!currentRoomId) return;
 
-    setMessages([]);
-    setHasMore(true);
+    setMembers([]);
+    loadMembers(currentRoomId);
 
+    setMessages([]);
     loadMessages(currentRoomId);
   }, [currentRoomId]);
 
@@ -229,14 +161,8 @@ function Chat({ token, user, onLogout }) {
 
     connection.on("ReceiveMessage", (msg) => {
       if (msg.roomId !== currentRoomId) return;
-
-      const shouldScroll = isNearBottom();
-
       setMessages(prev => [...prev, msg]);
-
-      if (shouldScroll) {
-        setTimeout(scrollToBottom, 50);
-      }
+      setTimeout(scrollToBottom, 20);
     });
 
     connection.start().then(() => {
@@ -252,85 +178,69 @@ function Chat({ token, user, onLogout }) {
 
   const sendMessage = async () => {
     if (!text.trim()) return;
-
     await connectionRef.current.invoke("SendMessage", currentRoomId, text);
     setText("");
   };
 
+  const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
+  const privateChannels = channels.filter(c => (c.isPrivate ?? !c.isPublic));
+
   return (
     <div className="w-full h-screen flex overflow-hidden">
-      <div className="w-64 bg-slate-100 border-r border-slate-200 p-4 flex flex-col">
-        <div className="font-semibold mb-1">Channels</div>
+
+      <div className="w-64 bg-slate-100 border-r p-4 flex flex-col">
+        <div className="font-semibold mb-3">Channels</div>
+
         <div className="text-xs text-slate-500 mb-3">
           Logged in as: {user.username}
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="mb-3 bg-blue-600 text-white text-sm rounded px-3 py-1"
-        >
-          + Add Channel
-        </button>
+        <div className="text-xs font-semibold text-slate-500 mt-2">Public Channels</div>
+        {publicChannels.map(c => (
+          <div
+            key={c.id}
+            onClick={() => setCurrentRoomId(c.id)}
+            className="p-2 cursor-pointer hover:bg-slate-200 rounded"
+          >
+            {c.name ?? c.title}
+          </div>
+        ))}
 
-        <div className="space-y-2 flex-1">
-          {channels.map(c => (
-            <div
-              key={c.id}
-              onClick={() => setCurrentRoomId(c.id)}
-              className={`p-2 rounded cursor-pointer ${
-                currentRoomId === c.id
-                  ? "bg-blue-100"
-                  : "hover:bg-slate-200"
-              }`}
-            >
-              {c.title}
-            </div>
-          ))}
-        </div>
+        <div className="text-xs font-semibold text-slate-500 mt-4">Private Groups</div>
+        {privateChannels.map(c => (
+          <div
+            key={c.id}
+            onClick={() => setCurrentRoomId(c.id)}
+            className="p-2 cursor-pointer hover:bg-slate-200 rounded"
+          >
+            {c.name ?? c.title}
+          </div>
+        ))}
 
-        <button
-          onClick={onLogout}
-          className="text-sm text-red-500 mt-4"
-        >
+        <button onClick={onLogout} className="text-sm text-red-500 mt-auto">
           Logout
         </button>
       </div>
 
       <div className="flex-1 flex flex-col bg-white">
-        <div className="border-b p-3 flex justify-between items-center">
-          <div className="font-semibold">Chat</div>
-          {currentRoomId && (
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="text-sm bg-green-600 text-white px-3 py-1 rounded"
-            >
-              Invite
-            </button>
-          )}
+        <div className="border-b p-3 font-semibold">
+          Chat
         </div>
 
         <div
           ref={containerRef}
-          onScroll={handleScroll}
           className="flex-1 overflow-y-auto p-4 space-y-4"
         >
           {messages.map(msg => {
             const mine = msg.senderId === user.id;
 
             return (
-              <div
-                key={msg.id}
-                className={`w-full flex ${mine ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={
-                    mine
-                      ? "bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-2 shadow-sm"
-                      : "bg-slate-200 text-black rounded-2xl rounded-tl-none px-4 py-2 shadow-sm"
-                  }
-                >
+              <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                <div className={mine
+                  ? "bg-blue-600 text-white px-4 py-2 rounded-xl"
+                  : "bg-slate-200 px-4 py-2 rounded-xl"}>
                   {!mine && (
-                    <div className="text-[11px] text-slate-600 mb-1">
+                    <div className="text-xs text-slate-600">
                       {msg.senderName}
                     </div>
                   )}
@@ -341,43 +251,60 @@ function Chat({ token, user, onLogout }) {
           })}
         </div>
 
-        <div className="border-t border-slate-200 p-3 flex gap-2">
+        <div className="border-t p-3 flex gap-2">
           <input
             value={text}
             onChange={e => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
-            }}
-            placeholder="Type a message..."
-            className="flex-1 border border-slate-200 rounded-lg px-3 py-2"
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            className="flex-1 border rounded px-3 py-2"
           />
           <button
             onClick={sendMessage}
-            className="bg-blue-600 text-white px-4 rounded-lg"
+            className="bg-blue-600 text-white px-4 rounded"
           >
             Send
           </button>
         </div>
       </div>
 
+      <div className="w-64 border-l bg-slate-50 p-4">
+        <div className="flex justify-between items-center mb-3">
+          <div className="font-semibold">Members</div>
+
+          {isPrivateRoom && (
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+            >
+              Invite
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {members?.map(m => (
+            <div key={m?.userId} className="text-sm">
+              {m?.username}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-80 shadow-xl">
+          <div className="bg-white p-6 rounded w-80">
             <h2 className="font-semibold mb-3">Invite User</h2>
 
             <input
               value={searchQuery}
               onChange={(e) => searchUsers(e.target.value)}
               placeholder="Search username..."
-              className="w-full border border-slate-200 rounded px-3 py-2 mb-3"
+              className="w-full border px-3 py-2 rounded mb-3"
             />
 
-            <div className="max-h-40 overflow-y-auto space-y-2">
+            <div className="space-y-2 max-h-40 overflow-y-auto">
               {searchResults?.map(u => (
-                <div
-                  key={u?.id}
-                  className="flex justify-between items-center border rounded px-2 py-1"
-                >
+                <div key={u?.id} className="flex justify-between">
                   <span>{u?.username}</span>
                   <button
                     onClick={() => inviteUser(u?.id)}
