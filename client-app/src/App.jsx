@@ -50,7 +50,6 @@ function AuthForm({ onLogin }) {
       const data = await res.json();
       localStorage.setItem("jwt", data.token);
       onLogin(data.token);
-
     } catch (err) {
       setError(err.message);
     }
@@ -106,7 +105,7 @@ function AuthForm({ onLogin }) {
   );
 }
 
-function Chat({ token }) {
+function Chat({ token, onLogout }) {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -132,7 +131,7 @@ function Chat({ token }) {
     if (!token) return;
 
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE}/chatHub`, {
+      .withUrl("http://localhost:58097/chatHub", {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
@@ -143,15 +142,22 @@ function Chat({ token }) {
       setMessages(prev => [...prev, message]);
     });
 
-    connection.start().then(() => {
-      if (selectedChannelRef.current) {
-        connection.invoke("JoinRoom", selectedChannelRef.current);
-      }
-    });
+    connection
+      .start()
+      .then(() => {
+        if (selectedChannelRef.current) {
+          connection.invoke("JoinRoom", selectedChannelRef.current);
+        }
+      })
+      .catch(err => console.error("SignalR connection error:", err));
 
     connectionRef.current = connection;
 
-    return () => connection.stop();
+    return () => {
+      if (connection) {
+        connection.stop();
+      }
+    };
   }, [token]);
 
   useEffect(() => {
@@ -166,7 +172,6 @@ function Chat({ token }) {
     if (connection && connection.state === "Connected") {
       connection.invoke("JoinRoom", selectedChannel);
     }
-
   }, [selectedChannel]);
 
   const sendMessage = async () => {
@@ -177,10 +182,23 @@ function Chat({ token }) {
     setText("");
   };
 
+  const logout = () => {
+    const connection = connectionRef.current;
+    if (connection) {
+      connection.stop();
+    }
+    localStorage.removeItem("jwt");
+    onLogout();
+  };
+
   return (
     <div style={styles.app}>
       <div style={styles.sidebar}>
-        <h3 style={{ marginBottom: 10 }}>Channels</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+          <h3>Channels</h3>
+          <button style={styles.logoutBtn} onClick={logout}>Logout</button>
+        </div>
+
         {channels.map(c => (
           <div
             key={c.id}
@@ -230,7 +248,7 @@ export default function App() {
     return <AuthForm onLogin={setToken} />;
   }
 
-  return <Chat token={token} />;
+  return <Chat token={token} onLogout={() => setToken(null)} />;
 }
 
 const styles = {
@@ -302,6 +320,15 @@ const styles = {
     width: 220,
     borderRight: "1px solid #ddd",
     padding: 15
+  },
+
+  logoutBtn: {
+    border: "none",
+    background: "#ef4444",
+    color: "white",
+    padding: "4px 8px",
+    borderRadius: 4,
+    cursor: "pointer"
   },
 
   channelItem: {
