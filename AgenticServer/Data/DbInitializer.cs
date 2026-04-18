@@ -42,13 +42,15 @@ namespace AgenticServer.Data
 
             await db.SaveChangesAsync();
 
-            var generalRoom = await db.Rooms.FirstOrDefaultAsync(r => r.Name == "General");
+            var generalRoomId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000");
+
+            var generalRoom = await db.Rooms.FirstOrDefaultAsync(r => r.Id == generalRoomId);
 
             if (generalRoom == null)
             {
                 generalRoom = new Room
                 {
-                    Id = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+                    Id = generalRoomId,
                     Name = "General",
                     IsPrivate = false,
                     OwnerId = null,
@@ -59,9 +61,9 @@ namespace AgenticServer.Data
                 await db.SaveChangesAsync();
             }
 
-            var existingCount = await db.Messages.CountAsync(m => m.RoomId == generalRoom.Id);
+            var messagesExist = await db.Messages.AnyAsync(m => m.RoomId == generalRoom.Id);
 
-            if (existingCount >= 100)
+            if (messagesExist)
                 return;
 
             var startTime = DateTime.UtcNow.AddMinutes(-100);
@@ -76,7 +78,7 @@ namespace AgenticServer.Data
                 {
                     Id = Guid.NewGuid(),
                     RoomId = generalRoom.Id,
-                    SenderId = sender.Id,
+                    SenderId = sender!.Id,
                     Content = $"Seed message #{i + 1}",
                     Timestamp = startTime.AddMinutes(i)
                 });
