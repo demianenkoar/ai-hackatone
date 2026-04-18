@@ -12,14 +12,19 @@ export default function AuthPage({ setToken }) {
   const [message, setMessage] = useState("");
 
   const login = async () => {
+    if (!email || !password) {
+      setMessage("Email and password are required");
+      return;
+    }
+
     const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        username: email,
-        password
+        email: email,
+        password: password
       })
     });
 
@@ -36,14 +41,20 @@ export default function AuthPage({ setToken }) {
   };
 
   const register = async () => {
+    if (!email || !password) {
+      setMessage("Email and password are required");
+      return;
+    }
+
     const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        username: username || email,
-        password
+        email: email,
+        password: password,
+        userName: username || email
       })
     });
 
