@@ -12,10 +12,10 @@ export default function AuthPage({ setToken }) {
   const [message, setMessage] = useState("");
 
   const login = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalized = (username || email).trim().toLowerCase();
 
-    if (!normalizedEmail || !password) {
-      setMessage("Email and password are required");
+    if (!normalized || !password) {
+      setMessage("Username/email and password are required");
       return;
     }
 
@@ -25,8 +25,8 @@ export default function AuthPage({ setToken }) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        email: normalizedEmail,
-        password: password
+        username: normalized,
+        passwordHash: password
       })
     });
 
@@ -56,10 +56,10 @@ export default function AuthPage({ setToken }) {
   };
 
   const register = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalized = (username || email).trim().toLowerCase();
 
-    if (!normalizedEmail || !password) {
-      setMessage("Email and password are required");
+    if (!normalized || !password) {
+      setMessage("Username/email and password are required");
       return;
     }
 
@@ -69,13 +69,12 @@ export default function AuthPage({ setToken }) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        email: normalizedEmail,
-        password: password,
-        userName: username || normalizedEmail
+        username: normalized,
+        passwordHash: password
       })
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       console.error("Registration error detail:", data);
@@ -108,7 +107,7 @@ export default function AuthPage({ setToken }) {
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Display name"
+            placeholder="Username"
             className="w-full border px-3 py-2 rounded mb-3"
           />
         )}
@@ -116,7 +115,7 @@ export default function AuthPage({ setToken }) {
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
+          placeholder="Email (optional)"
           className="w-full border px-3 py-2 rounded mb-3"
         />
 
