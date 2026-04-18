@@ -55,8 +55,6 @@ function AppContent({ token, setToken }) {
   const safeFetch = async (url, options = {}) => {
     const storedToken = localStorage.getItem("token");
 
-    console.log("Token being sent:", storedToken);
-
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -127,8 +125,6 @@ function AppContent({ token, setToken }) {
       .withAutomaticReconnect()
       .build();
 
-    console.log("SignalR: registering ReceiveMessage listener");
-
     connection.on("ReceiveMessage", (message) => {
       console.log("SignalR: Received message", message);
 
@@ -144,7 +140,7 @@ function AppContent({ token, setToken }) {
     connection
       .start()
       .then(() => {
-        console.log("SignalR: Connected to chat hub");
+        console.log("SignalR connected");
       })
       .catch((err) => {
         console.error("SignalR connection error:", err);
