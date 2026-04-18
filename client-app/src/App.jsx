@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
@@ -31,28 +31,14 @@ function decodeUser(token) {
   }
 }
 
-function ChannelRoute({ setCurrentRoomId, children }) {
-  const { channelId } = useParams();
-
-  useEffect(() => {
-    if (channelId) {
-      setCurrentRoomId(channelId);
-    }
-  }, [channelId]);
-
-  return children;
-}
-
 function AppContent({ token, setToken }) {
   const [user, setUser] = useState(
     token ? decodeUser(token) : { id: null, username: "" }
   );
 
   const [channels, setChannels] = useState([]);
-  const [currentRoomId, setCurrentRoomId] = useState(null);
 
   const [messages, setMessages] = useState([]);
-  const [members, setMembers] = useState([]);
 
   const [text, setText] = useState("");
 
@@ -141,21 +127,23 @@ function AppContent({ token, setToken }) {
       setMessages(prev => [...prev, msg]);
     });
 
-    connection.start().then(() => {
-      if (currentRoomId) {
-        connection.invoke("JoinRoom", currentRoomId);
-      }
-    });
+    connection.start();
 
     connectionRef.current = connection;
 
     return () => connection.stop();
-  }, [token, currentRoomId]);
+  }, [token]);
 
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    await connectionRef.current.invoke("SendMessage", currentRoomId, text);
+    const path = window.location.pathname;
+    const parts = path.split("/");
+    const roomId = parts[2];
+
+    if (!roomId) return;
+
+    await connectionRef.current.invoke("SendMessage", roomId, text);
     setText("");
   };
 
@@ -169,7 +157,6 @@ function AppContent({ token, setToken }) {
 
       <Sidebar
         channels={channels}
-        currentRoomId={currentRoomId}
         user={user}
         onLogout={handleLogout}
         onCreateChannel={() => setShowCreateModal(true)}
@@ -188,14 +175,14 @@ function AppContent({ token, setToken }) {
         <Route
           path="/channel/:channelId"
           element={
-            <ChannelRoute setCurrentRoomId={setCurrentRoomId}>
-              <ChatArea
-                messages={messages}
-                text={text}
-                setText={setText}
-                sendMessage={sendMessage}
-              />
-            </ChannelRoute>
+            <ChatArea
+              messages={messages}
+              setMessages={setMessages}
+              text={text}
+              setText={setText}
+              sendMessage={sendMessage}
+              connectionRef={connectionRef}
+            />
           }
         />
       </Routes>
