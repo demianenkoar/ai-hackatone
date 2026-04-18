@@ -3,9 +3,13 @@ import { useState } from "react";
 const API_BASE = "http://localhost:58097";
 
 export default function AuthPage({ setToken }) {
-  const [mode, setMode] = useState("login");
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const [message, setMessage] = useState("");
 
   const login = async () => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -13,11 +17,14 @@ export default function AuthPage({ setToken }) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({
+        username: email,
+        password
+      })
     });
 
     if (!res.ok) {
-      alert("Login failed");
+      setMessage("Login failed");
       return;
     }
 
@@ -34,29 +41,51 @@ export default function AuthPage({ setToken }) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({
+        username: username || email,
+        password
+      })
     });
 
     if (!res.ok) {
-      alert("Registration failed");
+      setMessage("Registration failed");
       return;
     }
+
+    setMessage("Account created. Signing you in...");
 
     await login();
   };
 
+  const handleSubmit = () => {
+    if (isRegistering) {
+      register();
+    } else {
+      login();
+    }
+  };
+
   return (
     <div className="w-full h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white p-8 rounded shadow w-80 border border-[#e1dfdd]">
+      <div className="bg-white p-8 rounded shadow w-80 border border-[#e1dfdd] min-h-[320px] flex flex-col">
 
         <h2 className="text-xl font-semibold mb-4">
-          {mode === "login" ? "Login" : "Register"}
+          {isRegistering ? "Create account" : "Sign in"}
         </h2>
 
+        {isRegistering && (
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Display name"
+            className="w-full border px-3 py-2 rounded mb-3"
+          />
+        )}
+
         <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
           className="w-full border px-3 py-2 rounded mb-3"
         />
 
@@ -68,23 +97,51 @@ export default function AuthPage({ setToken }) {
           className="w-full border px-3 py-2 rounded mb-4"
         />
 
-        {mode === "login" ? (
-          <button
-            onClick={login}
-            className="w-full text-white py-2 rounded"
-            style={{ backgroundColor: "#6264a7" }}
-          >
-            Login
-          </button>
-        ) : (
-          <button
-            onClick={register}
-            className="w-full text-white py-2 rounded"
-            style={{ backgroundColor: "#6264a7" }}
-          >
-            Register
-          </button>
+        <button
+          onClick={handleSubmit}
+          className="w-full text-white py-2 rounded mb-3"
+          style={{ backgroundColor: "#6264a7" }}
+        >
+          {isRegistering ? "Register" : "Sign in"}
+        </button>
+
+        {message && (
+          <div className="text-sm text-gray-600 mb-2">
+            {message}
+          </div>
         )}
+
+        <div className="text-sm mt-auto">
+          {isRegistering ? (
+            <span>
+              Already have an account?{" "}
+              <button
+                onClick={() => {
+                  setIsRegistering(false);
+                  setMessage("");
+                }}
+                className="hover:underline"
+                style={{ color: "#6264a7" }}
+              >
+                Sign in
+              </button>
+            </span>
+          ) : (
+            <span>
+              No account?{" "}
+              <button
+                onClick={() => {
+                  setIsRegistering(true);
+                  setMessage("");
+                }}
+                className="hover:underline"
+                style={{ color: "#6264a7" }}
+              >
+                Create one!
+              </button>
+            </span>
+          )}
+        </div>
 
       </div>
     </div>
