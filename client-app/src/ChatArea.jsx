@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 
-const API_BASE = "https://localhost:58096";
+const API_BASE = "https://localhost:58097";
 
 export default function ChatArea({
   messages,

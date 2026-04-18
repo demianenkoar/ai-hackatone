@@ -8,7 +8,7 @@ import AuthPage from "./AuthPage";
 import CreateRoomModal from "./CreateRoomModal";
 import InviteMemberModal from "./InviteMemberModal";
 
-const API_BASE = "https://localhost:58096";
+const API_BASE = "https://localhost:58097";
 
 function decodeUser(token) {
   try {
