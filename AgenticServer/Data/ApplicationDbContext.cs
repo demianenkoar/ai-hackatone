@@ -17,7 +17,7 @@ namespace AgenticServer.Data
         public DbSet<Friendship> Friendships => Set<Friendship>();
         public DbSet<Message> Messages => Set<Message>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
-		public DbSet<Channel> Channels { get; set; }
+        public DbSet<Channel> Channels { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,24 +38,9 @@ namespace AgenticServer.Data
             modelBuilder.Entity<RoomMember>()
                 .HasKey(rm => new { rm.RoomId, rm.UserId });
 
-            modelBuilder.Entity<Friendship>()
-                .HasKey(f => new { f.UserId, f.FriendId });
-
-            modelBuilder.Entity<Friendship>()
-                .HasOne(f => f.User)
-                .WithMany()
-                .HasForeignKey(f => f.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<Friendship>()
-                .HasOne(f => f.Friend)
-                .WithMany()
-                .HasForeignKey(f => f.FriendId)
-                .OnDelete(DeleteBehavior.NoAction);
-
             modelBuilder.Entity<RoomMember>()
                 .HasOne(rm => rm.Room)
-                .WithMany()
+                .WithMany(r => r.Members)
                 .HasForeignKey(rm => rm.RoomId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -69,6 +54,21 @@ namespace AgenticServer.Data
                 .HasOne<User>()
                 .WithMany()
                 .HasForeignKey(rm => rm.BannedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Friendship>()
+                .HasKey(f => new { f.UserId, f.FriendId });
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.User)
+                .WithMany()
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.Friend)
+                .WithMany()
+                .HasForeignKey(f => f.FriendId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Message>()
