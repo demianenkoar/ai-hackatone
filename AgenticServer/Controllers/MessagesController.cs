@@ -24,7 +24,9 @@ namespace AgenticServer.Controllers
             [FromQuery] DateTime? before,
             [FromQuery] int pageSize = 20)
         {
-            // Debug-safe query that guarantees room filtering works
+            if (roomId == Guid.Empty)
+                return BadRequest("Invalid roomId");
+
             var query = _context.Messages
                 .Include(m => m.Sender)
                 .Where(m => m.RoomId == roomId);
@@ -86,14 +88,17 @@ namespace AgenticServer.Controllers
             });
         }
 
-        [HttpGet("paged/{roomId}")]
-        public async Task<IActionResult> GetPaged(Guid roomId, [FromQuery] DateTime? ts)
+        [HttpGet("history")]
+        public async Task<IActionResult> GetHistory(
+            [FromQuery] Guid roomId,
+            [FromQuery] DateTime before)
         {
-            var cursor = ts ?? DateTime.UtcNow;
+            if (roomId == Guid.Empty)
+                return BadRequest("Invalid roomId");
 
             var messages = await _context.Messages
                 .Include(m => m.Sender)
-                .Where(m => m.RoomId == roomId && m.Timestamp < cursor)
+                .Where(m => m.RoomId == roomId && m.Timestamp < before)
                 .OrderByDescending(m => m.Timestamp)
                 .Take(20)
                 .Select(m => new

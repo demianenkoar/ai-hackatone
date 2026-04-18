@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
+const PAGE_SIZE = 20;
 
 function decodeUser(token) {
   try {
@@ -29,7 +30,11 @@ function Chat({ token, user, onLogout }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const connectionRef = useRef(null);
+  const containerRef = useRef(null);
 
   const loadChannels = async () => {
     const res = await fetch(`${API_BASE}/api/channels`, {
@@ -39,7 +44,6 @@ function Chat({ token, user, onLogout }) {
     const data = await res.json();
     setChannels(data);
 
-    // If no room selected yet, auto-select General
     if (!selectedChannel && data.length > 0) {
       const general = data.find(r => r.title?.toLowerCase() === "general");
       if (general) {
@@ -58,9 +62,49 @@ function Chat({ token, user, onLogout }) {
     const res = await fetch(`${API_BASE}/api/messages/${roomId}`);
     const data = await res.json();
 
-    console.log("Messages received:", data);
-
     setMessages(data);
+    setHasMore(data.length === PAGE_SIZE);
+  };
+
+  const loadMoreMessages = async () => {
+    if (!selectedChannel) return;
+    if (!hasMore || loadingMore || messages.length === 0) return;
+
+    setLoadingMore(true);
+
+    const oldest = messages[0];
+    const container = containerRef.current;
+    const prevHeight = container ? container.scrollHeight : 0;
+
+    const res = await fetch(
+      `${API_BASE}/api/messages/${selectedChannel}?before=${encodeURIComponent(oldest.timestamp)}`
+    );
+
+    const older = await res.json();
+
+    if (older.length < PAGE_SIZE) {
+      setHasMore(false);
+    }
+
+    setMessages(prev => [...older, ...prev]);
+
+    setTimeout(() => {
+      if (container) {
+        const newHeight = container.scrollHeight;
+        container.scrollTop = newHeight - prevHeight;
+      }
+    }, 0);
+
+    setLoadingMore(false);
+  };
+
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (container.scrollTop === 0) {
+      loadMoreMessages();
+    }
   };
 
   useEffect(() => {
@@ -68,9 +112,13 @@ function Chat({ token, user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (selectedChannel) {
-      loadMessages(selectedChannel);
-    }
+    if (!selectedChannel) return;
+
+    // Reset when switching rooms
+    setMessages([]);
+    setHasMore(true);
+
+    loadMessages(selectedChannel);
   }, [selectedChannel]);
 
   useEffect(() => {
@@ -141,7 +189,11 @@ function Chat({ token, user, onLogout }) {
       </div>
 
       <div className="flex-1 flex flex-col bg-white">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+        >
           {messages.map(msg => {
             const mine = msg.senderId === user.id;
 
