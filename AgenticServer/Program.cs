@@ -26,6 +26,9 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapGet("/", () => "AgenticServer running");
 
 app.MapGet("/test-db", async (IConfiguration config) =>

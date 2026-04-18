@@ -11,20 +11,36 @@ namespace AgenticServer.Hubs
         private readonly ApplicationDbContext _db;
 
         private static ConcurrentDictionary<string, string> OnlineUsers = new();
+        private static ConcurrentDictionary<string, Guid> TestUsers = new();
 
         public ChatHub(ApplicationDbContext db)
         {
             _db = db;
         }
 
+        private Guid ResolveUserId()
+        {
+            var claimId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(claimId))
+            {
+                return Guid.Parse(claimId);
+            }
+
+            var http = Context.GetHttpContext();
+            var username = http?.Request.Query["username"].ToString();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                username = "guest";
+            }
+
+            return TestUsers.GetOrAdd(username, _ => Guid.NewGuid());
+        }
+
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (!string.IsNullOrEmpty(userId))
-            {
-                OnlineUsers[userId] = Context.ConnectionId;
-            }
+            var userId = ResolveUserId().ToString();
+            OnlineUsers[userId] = Context.ConnectionId;
 
             await base.OnConnectedAsync();
         }
@@ -36,12 +52,7 @@ namespace AgenticServer.Hubs
 
         public async Task SendMessage(Guid roomId, string content)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-                throw new HubException("User not identified");
-
-            var senderId = Guid.Parse(userId);
+            var senderId = ResolveUserId();
 
             var message = new Message
             {
