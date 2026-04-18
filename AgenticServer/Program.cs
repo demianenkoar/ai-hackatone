@@ -1,11 +1,53 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using AgenticServer.Hubs;
 using AgenticServer.Data;
 using AgenticServer.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "dev_secret_key_123456789";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtKey))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/chatHub"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddSignalR();
 
@@ -39,6 +81,7 @@ app.UseRouting();
 
 app.UseCors("ReactDev");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/", () => "AgenticServer running");
@@ -67,8 +110,8 @@ app.MapGet("/test-db", async (IConfiguration config) =>
     }
 });
 
-app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.MapControllers();
 
@@ -78,21 +121,6 @@ try
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     db.Database.Migrate();
-
-    var systemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-
-    if (!db.Users.Any(u => u.Id == systemUserId))
-    {
-        var systemUser = new User
-        {
-            Id = systemUserId,
-            Username = "system",
-            Email = "system@local"
-        };
-
-        db.Users.Add(systemUser);
-        db.SaveChanges();
-    }
 
     if (!db.Rooms.Any())
     {

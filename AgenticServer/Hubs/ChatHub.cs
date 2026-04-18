@@ -2,16 +2,17 @@ using System.Collections.Concurrent;
 using System.Security.Claims;
 using AgenticServer.Data;
 using AgenticServer.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace AgenticServer.Hubs
 {
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly ApplicationDbContext _db;
 
         private static ConcurrentDictionary<string, string> OnlineUsers = new();
-        private static readonly Guid SystemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
         public ChatHub(ApplicationDbContext db)
         {
@@ -22,12 +23,10 @@ namespace AgenticServer.Hubs
         {
             var claimId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (!string.IsNullOrEmpty(claimId))
-            {
-                return Guid.Parse(claimId);
-            }
+            if (string.IsNullOrEmpty(claimId))
+                throw new Exception("User not authenticated");
 
-            return SystemUserId;
+            return Guid.Parse(claimId);
         }
 
         public override async Task OnConnectedAsync()
@@ -59,7 +58,17 @@ namespace AgenticServer.Hubs
             _db.Messages.Add(message);
             await _db.SaveChangesAsync();
 
-            await Clients.Group(roomId.ToString()).SendAsync("ReceiveMessage", message);
+            var sender = await _db.Users.FindAsync(senderId);
+
+            await Clients.Group(roomId.ToString()).SendAsync("ReceiveMessage", new
+            {
+                id = message.Id,
+                roomId = message.RoomId,
+                senderId = message.SenderId,
+                senderName = sender?.Username ?? "Unknown",
+                content = message.Content,
+                timestamp = message.Timestamp
+            });
         }
     }
 }
