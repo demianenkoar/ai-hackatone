@@ -188,28 +188,30 @@ namespace AgenticServer.Controllers
                 if (user == null)
                     return NotFound();
 
-                var ownedRooms = await _db.Rooms
+                var userRooms = await _db.Rooms
                     .Where(r => r.OwnerId == userId)
                     .ToListAsync();
 
-                var ownedRoomIds = ownedRooms.Select(r => r.Id).ToList();
+                var roomIds = userRooms.Select(r => r.Id).ToList();
 
-                var messages = await _db.Messages
-                    .Where(m => ownedRoomIds.Contains(m.RoomId))
+                var messagesToDelete = await _db.Messages
+                    .Where(m => roomIds.Contains(m.RoomId))
                     .ToListAsync();
 
-                var attachments = await _db.Attachments
-                    .Where(a => ownedRoomIds.Contains(a.RoomId))
+                var messageIds = messagesToDelete.Select(m => m.Id).ToList();
+
+                var attachmentsToDelete = await _db.Attachments
+                    .Where(a => messageIds.Contains(a.MessageId))
                     .ToListAsync();
 
                 var memberships = await _db.RoomMembers
-                    .Where(m => ownedRoomIds.Contains(m.RoomId))
+                    .Where(m => roomIds.Contains(m.RoomId))
                     .ToListAsync();
 
-                _db.Attachments.RemoveRange(attachments);
-                _db.Messages.RemoveRange(messages);
+                _db.Attachments.RemoveRange(attachmentsToDelete);
+                _db.Messages.RemoveRange(messagesToDelete);
                 _db.RoomMembers.RemoveRange(memberships);
-                _db.Rooms.RemoveRange(ownedRooms);
+                _db.Rooms.RemoveRange(userRooms);
 
                 var userMemberships = await _db.RoomMembers
                     .Where(m => m.UserId == userId)
