@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
+import InviteMemberModal from "./InviteMemberModal";
 
 const API_BASE = "http://localhost:58097";
 
@@ -25,9 +26,48 @@ export default function ChatArea({
   const prevHeightRef = useRef(0);
   const isPrependingRef = useRef(false);
 
-  console.log("Active channel:", channelId);
-  console.log("Messages in ChatArea:", messages);
-  console.log("Rendering messages:", safeMessages.length);
+  const [members, setMembers] = useState([]);
+  const [showMembers, setShowMembers] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [channel, setChannel] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!channelId || !token) return;
+
+    async function fetchChannel() {
+      const res = await fetch(`${API_BASE}/api/channels`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+      const current = data.find(c => String(c.id) === String(channelId));
+      setChannel(current);
+    }
+
+    fetchChannel();
+  }, [channelId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!channelId || !token) return;
+
+    async function fetchMembers() {
+      const res = await fetch(`${API_BASE}/api/rooms/${channelId}/members`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setMembers(data);
+    }
+
+    if (channel?.isPrivate === true) {
+      fetchMembers();
+    }
+
+  }, [channelId, channel]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -42,32 +82,22 @@ export default function ChatArea({
           }
         });
 
-        if (!res.ok) {
-          console.error("Message fetch failed:", res.status);
-          return;
-        }
+        if (!res.ok) return;
 
         const data = await res.json();
         setMessages(data);
 
-      } catch (err) {
-        console.error("Failed to fetch messages:", err);
-      }
+      } catch {}
     }
 
     setMessages([]);
-
     fetchMessages();
 
     if (connectionRef?.current) {
       connectionRef.current
         .invoke("JoinRoom", channelId)
-        .catch(err => console.error("JoinRoom error:", err));
+        .catch(() => {});
     }
-
-    return () => {
-      setMessages([]);
-    };
 
   }, [channelId]);
 
@@ -92,23 +122,18 @@ export default function ChatArea({
 
     const token = localStorage.getItem("token");
     const oldest = safeMessages[0]?.timestamp;
-
     if (!oldest) return;
 
     loadingRef.current = true;
 
     const el = containerRef.current;
-    if (el) {
-      prevHeightRef.current = el.scrollHeight;
-    }
+    if (el) prevHeightRef.current = el.scrollHeight;
 
     try {
       const res = await fetch(
         `${API_BASE}/api/messages/${channelId}?before=${encodeURIComponent(oldest)}&limit=20`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
@@ -124,9 +149,7 @@ export default function ChatArea({
         setMessages(prev => [...data, ...prev]);
       }
 
-    } catch (err) {
-      console.error("History load failed:", err);
-    }
+    } catch {}
 
     loadingRef.current = false;
   }
@@ -140,30 +163,104 @@ export default function ChatArea({
     }
   }
 
+  async function inviteUser(roomId, identifier) {
+    const token = localStorage.getItem("token");
+
+    await fetch(`${API_BASE}/api/rooms/${roomId}/members`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ identifier })
+    });
+
+    setShowInvite(false);
+  }
+
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex">
 
-      <div className="teams-header p-3 font-semibold">
-        Chat
+      <div className="flex-1 flex flex-col">
+
+        <div className="teams-header p-3 font-semibold flex justify-between items-center">
+
+          <span>Chat</span>
+
+          <div className="flex gap-2">
+
+            {channel?.isPrivate === true && (
+              <button
+                onClick={() => setShowInvite(true)}
+                className="text-white px-3 py-1 rounded text-sm"
+                style={{ backgroundColor: "#6264a7" }}
+              >
+                Invite Member
+              </button>
+            )}
+
+            {channel?.isPrivate === true && (
+              <button
+                onClick={() => setShowMembers(!showMembers)}
+                className="text-xs bg-white text-black px-2 py-1 rounded"
+              >
+                Members
+              </button>
+            )}
+
+          </div>
+
+        </div>
+
+        <div
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]"
+        >
+          {safeMessages.map((msg) => (
+            <Message key={msg.id} msg={msg} />
+          ))}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <MessageInput
+          text={text}
+          setText={setText}
+          sendMessage={sendMessage}
+        />
+
       </div>
 
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]"
-      >
-        {safeMessages.map((msg) => (
-          <Message key={msg.id} msg={msg} />
-        ))}
+      {showMembers && channel?.isPrivate === true && (
+        <div className="w-64 border-l bg-white p-4 overflow-y-auto">
 
-        <div ref={messagesEndRef} />
-      </div>
+          <div className="font-semibold mb-3">
+            Members
+          </div>
 
-      <MessageInput
-        text={text}
-        setText={setText}
-        sendMessage={sendMessage}
-      />
+          {members.map(m => (
+            <div key={m.id} className="flex items-center gap-2 mb-2">
+
+              <div className="avatar">
+                {m.username?.charAt(0).toUpperCase()}
+              </div>
+
+              <span className="text-sm">{m.username}</span>
+
+            </div>
+          ))}
+
+        </div>
+      )}
+
+      {showInvite && (
+        <InviteMemberModal
+          roomId={channelId}
+          inviteUser={inviteUser}
+          close={() => setShowInvite(false)}
+        />
+      )}
 
     </div>
   );
