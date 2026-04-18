@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
@@ -17,6 +17,10 @@ export default function ChatArea({
   const { channelId } = useParams();
 
   const safeMessages = messages || [];
+
+  const containerRef = useRef(null);
+  const loadingRef = useRef(false);
+  const prevHeightRef = useRef(0);
 
   console.log("Active channel:", channelId);
   console.log("Messages in ChatArea:", messages);
@@ -42,6 +46,12 @@ export default function ChatArea({
 
         const data = await res.json();
         setMessages(data);
+
+        setTimeout(() => {
+          const el = containerRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 0);
+
       } catch (err) {
         console.error("Failed to fetch messages:", err);
       }
@@ -63,6 +73,79 @@ export default function ChatArea({
 
   }, [channelId]);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    if (distanceFromBottom < 120) {
+      el.scrollTop = el.scrollHeight;
+    }
+
+  }, [messages]);
+
+  async function loadOlderMessages() {
+    if (loadingRef.current) return;
+    if (!safeMessages.length) return;
+
+    const token = localStorage.getItem("token");
+    const oldest = safeMessages[0]?.timestamp;
+
+    if (!oldest) return;
+
+    loadingRef.current = true;
+
+    const el = containerRef.current;
+    if (el) {
+      prevHeightRef.current = el.scrollHeight;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/messages/${channelId}?before=${encodeURIComponent(oldest)}&limit=20`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!res.ok) {
+        loadingRef.current = false;
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.length > 0) {
+        setMessages(prev => [...data, ...prev]);
+
+        setTimeout(() => {
+          const el = containerRef.current;
+          if (!el) return;
+
+          const newHeight = el.scrollHeight;
+          el.scrollTop = newHeight - prevHeightRef.current;
+        }, 0);
+      }
+
+    } catch (err) {
+      console.error("History load failed:", err);
+    }
+
+    loadingRef.current = false;
+  }
+
+  function handleScroll() {
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (el.scrollTop === 0) {
+      loadOlderMessages();
+    }
+  }
+
   return (
     <div className="flex-1 flex flex-col">
 
@@ -70,7 +153,11 @@ export default function ChatArea({
         Chat
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]"
+      >
         {safeMessages.map((msg) => (
           <Message key={msg.id} msg={msg} />
         ))}
