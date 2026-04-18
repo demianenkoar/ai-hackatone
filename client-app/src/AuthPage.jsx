@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_BASE = "https://localhost:58097";
+const API_BASE = "http://localhost:58097";
 
 export default function AuthPage({ setToken }) {
   const [mode, setMode] = useState("login");

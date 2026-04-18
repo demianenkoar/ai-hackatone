@@ -25,7 +25,7 @@ export default function App() {
 
   useEffect(() => {
     const conn = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:58097/chathub")
+      .withUrl("http://localhost:58097/chatHub")
       .withAutomaticReconnect()
       .build();
 
