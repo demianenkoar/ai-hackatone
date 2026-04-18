@@ -42,11 +42,30 @@ export default function ChatArea({
     const connection = connectionRef.current;
     if (!connection || !channelId) return;
 
-    console.log("SignalR: joining room", channelId);
+    let cancelled = false;
 
-    connection.invoke("JoinRoom", channelId)
-      .then(() => console.log("SignalR: joined room", channelId))
-      .catch(err => console.error("JoinRoom failed", err));
+    async function ensureJoined() {
+      try {
+        if (connection.state !== "Connected") {
+          console.log("SignalR not connected yet, waiting...");
+          setTimeout(ensureJoined, 300);
+          return;
+        }
+
+        if (cancelled) return;
+
+        console.log("SignalR: joining room", channelId);
+
+        await connection.invoke("JoinRoom", channelId);
+
+        console.log("SignalR: joined room", channelId);
+
+      } catch (err) {
+        console.error("JoinRoom failed", err);
+      }
+    }
+
+    ensureJoined();
 
     const memberHandler = (newMember) => {
       console.log("SignalR: MemberAdded", newMember);
@@ -61,6 +80,7 @@ export default function ChatArea({
     connection.on("MemberAdded", memberHandler);
 
     return () => {
+      cancelled = true;
       connection.off("MemberAdded", memberHandler);
     };
 
