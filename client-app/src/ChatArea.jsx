@@ -174,19 +174,29 @@ export default function ChatArea({
     }
   }
 
-  async function inviteUser(roomId, identifier) {
+  async function inviteUser(roomId, userId) {
     const token = localStorage.getItem("token");
 
-    await fetch(`${API_BASE}/api/rooms/${roomId}/members`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ identifier })
-    });
+    if (!userId) return;
 
-    setShowInvite(false);
+    try {
+      const res = await fetch(`${API_BASE}/api/rooms/${roomId}/add-user/${userId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Invite failed:", text);
+        return;
+      }
+
+      setShowInvite(false);
+    } catch (err) {
+      console.error("Invite request failed:", err);
+    }
   }
 
   return (
@@ -251,7 +261,7 @@ export default function ChatArea({
           <div className="flex-1 overflow-y-auto p-4">
 
             {members.map(m => (
-              <div key={m.id} className="flex items-center gap-2 mb-2">
+              <div key={m.userId} className="flex items-center gap-2 mb-2">
 
                 <div className="avatar">
                   {m.username?.charAt(0).toUpperCase()}
