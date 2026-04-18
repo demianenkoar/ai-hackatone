@@ -18,19 +18,24 @@ namespace AgenticServer.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> Search(string query)
+        public async Task<IActionResult> Search([FromQuery] string query)
         {
             if (string.IsNullOrWhiteSpace(query))
                 return Ok(new List<object>());
 
+            var q = query.Trim().ToLower();
+
             var users = await _context.Users
-                .Where(u => u.Username.Contains(query))
+                .Where(u =>
+                    u.Username.ToLower().Contains(q) ||
+                    u.Email.ToLower().Contains(q))
                 .OrderBy(u => u.Username)
                 .Take(10)
                 .Select(u => new
                 {
-                    u.Id,
-                    u.Username
+                    id = u.Id,
+                    username = u.Username,
+                    email = u.Email
                 })
                 .ToListAsync();
 
