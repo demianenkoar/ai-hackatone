@@ -19,8 +19,11 @@ export default function ChatArea({
   const safeMessages = messages || [];
 
   const containerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
   const loadingRef = useRef(false);
   const prevHeightRef = useRef(0);
+  const isPrependingRef = useRef(false);
 
   console.log("Active channel:", channelId);
   console.log("Messages in ChatArea:", messages);
@@ -47,11 +50,6 @@ export default function ChatArea({
         const data = await res.json();
         setMessages(data);
 
-        setTimeout(() => {
-          const el = containerRef.current;
-          if (el) el.scrollTop = el.scrollHeight;
-        }, 0);
-
       } catch (err) {
         console.error("Failed to fetch messages:", err);
       }
@@ -77,11 +75,14 @@ export default function ChatArea({
     const el = containerRef.current;
     if (!el) return;
 
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-
-    if (distanceFromBottom < 120) {
-      el.scrollTop = el.scrollHeight;
+    if (isPrependingRef.current) {
+      const newHeight = el.scrollHeight;
+      el.scrollTop = newHeight - prevHeightRef.current;
+      isPrependingRef.current = false;
+      return;
     }
+
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
   }, [messages]);
 
@@ -119,15 +120,8 @@ export default function ChatArea({
       const data = await res.json();
 
       if (data.length > 0) {
+        isPrependingRef.current = true;
         setMessages(prev => [...data, ...prev]);
-
-        setTimeout(() => {
-          const el = containerRef.current;
-          if (!el) return;
-
-          const newHeight = el.scrollHeight;
-          el.scrollTop = newHeight - prevHeightRef.current;
-        }, 0);
       }
 
     } catch (err) {
@@ -161,6 +155,8 @@ export default function ChatArea({
         {safeMessages.map((msg) => (
           <Message key={msg.id} msg={msg} />
         ))}
+
+        <div ref={messagesEndRef} />
       </div>
 
       <MessageInput
