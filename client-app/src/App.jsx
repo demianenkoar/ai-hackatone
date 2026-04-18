@@ -119,14 +119,14 @@ function AppContent({ token, setToken }) {
     if (!token) return;
 
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE}/chatHub`, {
+      .withUrl(`${API_BASE}/chathub`, {
         accessTokenFactory: () => localStorage.getItem("token")
       })
       .withAutomaticReconnect()
       .build();
 
     connection.on("ReceiveMessage", (message) => {
-      console.log("SignalR: Received message", message);
+      console.log("SignalR: New message received", message);
 
       if (!message) return;
 
@@ -140,7 +140,7 @@ function AppContent({ token, setToken }) {
     connection
       .start()
       .then(() => {
-        console.log("SignalR connected");
+        console.log("SignalR: Connected");
       })
       .catch((err) => {
         console.error("SignalR connection error:", err);

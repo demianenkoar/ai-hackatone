@@ -37,7 +37,7 @@ builder.Services.AddAuthentication(options =>
             var path = context.HttpContext.Request.Path;
 
             if (!string.IsNullOrEmpty(accessToken) &&
-                path.StartsWithSegments("/chatHub"))
+                path.StartsWithSegments("/chathub"))
             {
                 context.Token = accessToken;
             }
@@ -110,7 +110,7 @@ app.MapGet("/test-db", async (IConfiguration config) =>
     }
 });
 
-app.MapHub<ChatHub>("/chatHub");
+app.MapHub<ChatHub>("/chathub");
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.MapControllers();
