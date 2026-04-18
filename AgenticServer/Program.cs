@@ -79,6 +79,21 @@ try
 
     db.Database.Migrate();
 
+    var systemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+    if (!db.Users.Any(u => u.Id == systemUserId))
+    {
+        var systemUser = new User
+        {
+            Id = systemUserId,
+            Username = "system",
+            Email = "system@local"
+        };
+
+        db.Users.Add(systemUser);
+        db.SaveChanges();
+    }
+
     if (!db.Rooms.Any())
     {
         var generalRoom = new Room
@@ -86,7 +101,8 @@ try
             Id = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
             Name = "General",
             IsPrivate = false,
-            OwnerId = null
+            OwnerId = null,
+            CreatedAt = DateTime.UtcNow
         };
 
         db.Rooms.Add(generalRoom);

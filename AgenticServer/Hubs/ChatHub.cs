@@ -11,7 +11,7 @@ namespace AgenticServer.Hubs
         private readonly ApplicationDbContext _db;
 
         private static ConcurrentDictionary<string, string> OnlineUsers = new();
-        private static ConcurrentDictionary<string, Guid> TestUsers = new();
+        private static readonly Guid SystemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
         public ChatHub(ApplicationDbContext db)
         {
@@ -21,20 +21,13 @@ namespace AgenticServer.Hubs
         private Guid ResolveUserId()
         {
             var claimId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (!string.IsNullOrEmpty(claimId))
             {
                 return Guid.Parse(claimId);
             }
 
-            var http = Context.GetHttpContext();
-            var username = http?.Request.Query["username"].ToString();
-
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                username = "guest";
-            }
-
-            return TestUsers.GetOrAdd(username, _ => Guid.NewGuid());
+            return SystemUserId;
         }
 
         public override async Task OnConnectedAsync()
