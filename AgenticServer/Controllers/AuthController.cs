@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AgenticServer.Controllers
 {
@@ -165,6 +166,72 @@ namespace AgenticServer.Controllers
             _logger.LogInformation("Login successful for user: {Email}", normalizedEmail);
 
             return Ok(new { token = jwt });
+        }
+
+        [Authorize]
+        [HttpDelete("/api/account")]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            var userId = Guid.Parse(userIdClaim);
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            try
+            {
+                var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+
+                if (user == null)
+                    return NotFound();
+
+                var ownedRooms = await _db.Rooms
+                    .Where(r => r.OwnerId == userId)
+                    .ToListAsync();
+
+                var ownedRoomIds = ownedRooms.Select(r => r.Id).ToList();
+
+                var messages = await _db.Messages
+                    .Where(m => ownedRoomIds.Contains(m.RoomId))
+                    .ToListAsync();
+
+                var attachments = await _db.Attachments
+                    .Where(a => ownedRoomIds.Contains(a.RoomId))
+                    .ToListAsync();
+
+                var memberships = await _db.RoomMembers
+                    .Where(m => ownedRoomIds.Contains(m.RoomId))
+                    .ToListAsync();
+
+                _db.Attachments.RemoveRange(attachments);
+                _db.Messages.RemoveRange(messages);
+                _db.RoomMembers.RemoveRange(memberships);
+                _db.Rooms.RemoveRange(ownedRooms);
+
+                var userMemberships = await _db.RoomMembers
+                    .Where(m => m.UserId == userId)
+                    .ToListAsync();
+
+                _db.RoomMembers.RemoveRange(userMemberships);
+
+                _db.Users.Remove(user);
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                _logger.LogInformation("User account deleted: {UserId}", userId);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                _logger.LogError(ex, "Account deletion failed for {UserId}", userId);
+                return StatusCode(500, "Account deletion failed");
+            }
         }
     }
 }

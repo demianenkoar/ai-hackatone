@@ -1,6 +1,8 @@
 import ChannelItem from "./ChannelItem";
 import RoomControls from "./RoomControls";
 
+const API_BASE = "http://localhost:58097";
+
 export default function Sidebar({
   channels,
   currentRoomId,
@@ -10,6 +12,36 @@ export default function Sidebar({
 }) {
   const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
   const privateChannels = channels.filter(c => (c.isPrivate ?? !c.isPublic));
+
+  async function handleDeleteAccount() {
+    const confirmed = window.confirm(
+      "Are you sure? This will permanently delete your account and all rooms you own."
+    );
+
+    if (!confirmed) return;
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/account`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        alert("Failed to delete account.");
+        return;
+      }
+
+      localStorage.clear();
+      onLogout();
+    } catch (err) {
+      console.error("Delete account failed", err);
+      alert("Delete account failed.");
+    }
+  }
 
   return (
     <div className="w-64 bg-[#f3f2f1] border-r p-4 flex flex-col">
@@ -30,8 +62,18 @@ export default function Sidebar({
         <ChannelItem key={c.id} channel={c} />
       ))}
 
-      <button onClick={onLogout} className="text-sm text-red-500 mt-auto">
+      <button
+        onClick={onLogout}
+        className="text-sm text-red-500 mt-auto"
+      >
         Logout
+      </button>
+
+      <button
+        onClick={handleDeleteAccount}
+        className="text-sm mt-3 border border-red-500 text-red-500 rounded px-2 py-1 hover:bg-red-500 hover:text-white"
+      >
+        Delete Account
       </button>
 
     </div>
