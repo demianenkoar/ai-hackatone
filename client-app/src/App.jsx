@@ -26,6 +26,27 @@ function decodeUser(token) {
   }
 }
 
+function formatTimestamp(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const now = new Date();
+
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+
+  if (sameDay) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  return (
+    d.toLocaleDateString() +
+    " " +
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
+}
+
 function AuthPage({ setToken }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
@@ -467,18 +488,24 @@ function Chat({ token, user, onLogout }) {
         >
           {messages.map(msg => {
             const mine = msg.senderId === user.id;
+            const time = formatTimestamp(msg.timestamp);
 
             return (
               <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={mine
-                  ? "bg-blue-600 text-white px-4 py-2 rounded-xl"
-                  : "bg-slate-200 px-4 py-2 rounded-xl"}>
+                  ? "bg-blue-600 text-white px-4 py-2 rounded-xl max-w-xs"
+                  : "bg-slate-200 px-4 py-2 rounded-xl max-w-xs"}>
                   {!mine && (
                     <div className="text-xs text-slate-600">
                       {msg.senderName}
                     </div>
                   )}
-                  {msg.content}
+
+                  <div>{msg.content}</div>
+
+                  <div className="text-xs text-gray-500 text-right mt-1">
+                    {time}
+                  </div>
                 </div>
               </div>
             );
