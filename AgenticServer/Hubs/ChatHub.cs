@@ -70,5 +70,11 @@ namespace AgenticServer.Hubs
                 timestamp = message.Timestamp
             });
         }
+
+        public async Task SendTypingNotification(string roomId, bool isTyping)
+        {
+            var username = Context.User?.Identity?.Name ?? "User";
+            await Clients.OthersInGroup(roomId).SendAsync("UserTyping", username, isTyping);
+        }
     }
 }

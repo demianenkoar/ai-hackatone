@@ -153,12 +153,14 @@ function Chat({ token, currentUserId, currentUsername, onLogout }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [typingUser, setTypingUser] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/channels`)
@@ -241,6 +243,14 @@ function Chat({ token, currentUserId, currentUsername, onLogout }) {
       setMessages(prev => [...prev, msg]);
     });
 
+    connection.on("UserTyping", (username, isTyping) => {
+      if (isTyping) {
+        setTypingUser(username);
+      } else {
+        setTypingUser(null);
+      }
+    });
+
     connection.start().then(() => {
       if (selectedChannel) {
         connection.invoke("JoinRoom", selectedChannel);
@@ -254,12 +264,31 @@ function Chat({ token, currentUserId, currentUsername, onLogout }) {
     };
   }, [token, selectedChannel]);
 
+  const handleTyping = (value) => {
+    setText(value);
+
+    const connection = connectionRef.current;
+    if (!connection || !selectedChannel) return;
+
+    connection.invoke("SendTypingNotification", selectedChannel.toString(), true);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      connection.invoke("SendTypingNotification", selectedChannel.toString(), false);
+    }, 3000);
+  };
+
   const sendMessage = async () => {
     const connection = connectionRef.current;
     if (!connection || !text.trim()) return;
 
     await connection.invoke("SendMessage", selectedChannel, text);
     setText("");
+
+    connection.invoke("SendTypingNotification", selectedChannel.toString(), false);
   };
 
   return (
@@ -337,10 +366,14 @@ function Chat({ token, currentUserId, currentUsername, onLogout }) {
           <div ref={messagesEndRef} />
         </div>
 
+        <div className="text-xs text-slate-500 italic ml-2 h-4">
+          {typingUser ? `${typingUser} is typing...` : ""}
+        </div>
+
         <div className="border-t border-slate-200 p-3 flex gap-2">
           <input
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") sendMessage();
             }}
