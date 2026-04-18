@@ -418,14 +418,10 @@ function Chat({ token, user, onLogout }) {
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    const shouldScroll = isNearBottom();
-
     await connectionRef.current.invoke("SendMessage", currentRoomId, text);
     setText("");
 
-    if (shouldScroll) {
-      setTimeout(scrollToBottom, 20);
-    }
+    setTimeout(scrollToBottom, 50);
   };
 
   const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
