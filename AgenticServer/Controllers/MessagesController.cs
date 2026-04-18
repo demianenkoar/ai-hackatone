@@ -19,15 +19,13 @@ namespace AgenticServer.Controllers
         public async Task<IActionResult> GetMessages(
             Guid roomId,
             [FromQuery] DateTime? before,
-            [FromQuery] int limit = 20)
+            [FromQuery] int pageSize = 20)
         {
-            var cursor = before ?? DateTime.UtcNow;
-
             var messages = await _context.Messages
                 .Include(m => m.Sender)
-                .Where(m => m.RoomId == roomId && m.Timestamp < cursor)
+                .Where(m => m.RoomId == roomId && (before == null || m.Timestamp < before))
                 .OrderByDescending(m => m.Timestamp)
-                .Take(limit)
+                .Take(pageSize)
                 .Select(m => new
                 {
                     id = m.Id,
@@ -64,6 +62,8 @@ namespace AgenticServer.Controllers
                     timestamp = m.Timestamp
                 })
                 .ToListAsync();
+
+            messages.Reverse();
 
             return Ok(messages);
         }

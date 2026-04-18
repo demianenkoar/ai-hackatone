@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
+const PAGE_SIZE = 20;
 
 function decodeUserId(token) {
   try {
@@ -124,14 +125,57 @@ function Chat({ token, onLogout, currentUserId }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const connectionRef = useRef(null);
   const selectedChannelRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  };
+
+  const fetchMoreMessages = async () => {
+    if (!hasMore || loadingMore || messages.length === 0) return;
+
+    setLoadingMore(true);
+
+    const oldest = messages[0];
+    const container = messagesContainerRef.current;
+    const previousHeight = container.scrollHeight;
+
+    const res = await fetch(
+      `${API_BASE}/api/messages/${selectedChannel}?before=${encodeURIComponent(
+        oldest.timestamp
+      )}&pageSize=${PAGE_SIZE}`
+    );
+
+    const newMessages = await res.json();
+
+    if (newMessages.length < PAGE_SIZE) {
+      setHasMore(false);
+    }
+
+    setMessages(prev => [...newMessages, ...prev]);
+
+    setTimeout(() => {
+      const newHeight = container.scrollHeight;
+      container.scrollTop = newHeight - previousHeight;
+    }, 0);
+
+    setLoadingMore(false);
+  };
+
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    if (container.scrollTop === 0) {
+      fetchMoreMessages();
     }
   };
 
@@ -180,7 +224,9 @@ function Chat({ token, onLogout, currentUserId }) {
   useEffect(() => {
     if (!selectedChannel) return;
 
-    fetch(`${API_BASE}/api/messages/${selectedChannel}`)
+    setHasMore(true);
+
+    fetch(`${API_BASE}/api/messages/${selectedChannel}?pageSize=${PAGE_SIZE}`)
       .then(r => r.json())
       .then(data => {
         setMessages(data);
@@ -233,15 +279,17 @@ function Chat({ token, onLogout, currentUserId }) {
       </div>
 
       <div style={styles.chatArea}>
-        <div style={styles.messages}>
+        <div
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          style={styles.messages}
+        >
           {messages.map(m => {
             const isMine = m.senderId === currentUserId;
-            const className = isMine ? "message-mine" : "message-other";
 
             return (
               <div
                 key={m.id}
-                className={className}
                 style={{
                   ...styles.messageBase,
                   ...(isMine ? styles.messageMine : styles.messageOther)
