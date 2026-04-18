@@ -46,7 +46,10 @@ function AppContent({ token, setToken }) {
   const [newRoomName, setNewRoomName] = useState("");
   const [isPublic, setIsPublic] = useState(true);
 
+  const [isConnected, setIsConnected] = useState(false);
+
   const connectionRef = useRef(null);
+  const currentRoomRef = useRef(null);
 
   useEffect(() => {
     if (token) setUser(decodeUser(token));
@@ -137,10 +140,31 @@ function AppContent({ token, setToken }) {
       });
     });
 
+    connection.onreconnecting((err) => {
+      console.log("Reconnecting...", err);
+      setIsConnected(false);
+    });
+
+    connection.onreconnected(() => {
+      console.log("Reconnected!");
+      setIsConnected(true);
+
+      if (currentRoomRef.current) {
+        console.log("Rejoining room after reconnect:", currentRoomRef.current);
+        connection.invoke("JoinRoom", currentRoomRef.current).catch(console.error);
+      }
+    });
+
+    connection.onclose((err) => {
+      console.log("Connection closed.", err);
+      setIsConnected(false);
+    });
+
     connection
       .start()
       .then(() => {
         console.log("SignalR: Connected");
+        setIsConnected(true);
       })
       .catch((err) => {
         console.error("SignalR connection error:", err);
@@ -161,7 +185,7 @@ function AppContent({ token, setToken }) {
     const parts = path.split("/");
     const roomId = parts[2];
 
-    if (!roomId || !connectionRef.current) return;
+    if (!roomId || !connectionRef.current || !isConnected) return;
 
     try {
       await connectionRef.current.invoke("SendMessage", roomId, text);
@@ -174,6 +198,15 @@ function AppContent({ token, setToken }) {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken(null);
+  };
+
+  const setCurrentRoom = (roomId) => {
+    currentRoomRef.current = roomId;
+
+    if (connectionRef.current && isConnected) {
+      console.log("Joining room:", roomId);
+      connectionRef.current.invoke("JoinRoom", roomId).catch(console.error);
+    }
   };
 
   return (
@@ -206,6 +239,8 @@ function AppContent({ token, setToken }) {
               setText={setText}
               sendMessage={sendMessage}
               connectionRef={connectionRef}
+              setCurrentRoom={setCurrentRoom}
+              isConnected={isConnected}
             />
           }
         />

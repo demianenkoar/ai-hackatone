@@ -12,7 +12,9 @@ export default function ChatArea({
   text,
   setText,
   sendMessage,
-  connectionRef
+  connectionRef,
+  setCurrentRoom,
+  isConnected
 }) {
 
   const { channelId } = useParams();
@@ -39,35 +41,16 @@ export default function ChatArea({
     channel?.isPublic === false;
 
   useEffect(() => {
+    if (!channelId) return;
+
+    console.log("Room changed, setting current room:", channelId);
+    setCurrentRoom(channelId);
+
+  }, [channelId, setCurrentRoom]);
+
+  useEffect(() => {
     const connection = connectionRef.current;
-    if (!connection || !channelId) return;
-
-    let cancelled = false;
-
-    async function ensureJoined() {
-      try {
-        if (connection.state !== "Connected") {
-          console.log("SignalR not connected yet, waiting...");
-          setTimeout(ensureJoined, 300);
-          return;
-        }
-
-        if (cancelled) return;
-
-        const roomId = String(channelId);
-
-        console.log("SignalR: attempting JoinRoom with id =", roomId);
-
-        await connection.invoke("JoinRoom", roomId);
-
-        console.log("SignalR: joined room", roomId);
-
-      } catch (err) {
-        console.error("JoinRoom failed", err);
-      }
-    }
-
-    ensureJoined();
+    if (!connection) return;
 
     const memberHandler = (newMember) => {
       console.log("SignalR: MemberAdded", newMember);
@@ -82,11 +65,10 @@ export default function ChatArea({
     connection.on("MemberAdded", memberHandler);
 
     return () => {
-      cancelled = true;
       connection.off("MemberAdded", memberHandler);
     };
 
-  }, [channelId, connectionRef]);
+  }, [connectionRef]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
