@@ -3,6 +3,7 @@ import * as signalR from "@microsoft/signalr";
 
 const API_BASE = "http://localhost:58097";
 const PAGE_SIZE = 20;
+const BOTTOM_THRESHOLD = 80;
 
 function decodeUser(token) {
   try {
@@ -27,14 +28,36 @@ function decodeUser(token) {
 
 function Chat({ token, user, onLogout }) {
   const [channels, setChannels] = useState([]);
-  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [currentRoomId, setCurrentRoomId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
+
   const connectionRef = useRef(null);
   const containerRef = useRef(null);
+
+  const isNearBottom = () => {
+    const container = containerRef.current;
+    if (!container) return false;
+
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      BOTTOM_THRESHOLD
+    );
+  };
+
+  const scrollToBottom = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+  };
 
   const loadChannels = async () => {
     const res = await fetch(`${API_BASE}/api/channels`, {
@@ -44,12 +67,12 @@ function Chat({ token, user, onLogout }) {
     const data = await res.json();
     setChannels(data);
 
-    if (!selectedChannel && data.length > 0) {
+    if (!currentRoomId && data.length > 0) {
       const general = data.find(r => r.title?.toLowerCase() === "general");
       if (general) {
-        setSelectedChannel(general.id);
+        setCurrentRoomId(general.id);
       } else {
-        setSelectedChannel(data[0].id);
+        setCurrentRoomId(data[0].id);
       }
     }
   };
@@ -64,10 +87,12 @@ function Chat({ token, user, onLogout }) {
 
     setMessages(data);
     setHasMore(data.length === PAGE_SIZE);
+
+    setTimeout(scrollToBottom, 50);
   };
 
   const loadMoreMessages = async () => {
-    if (!selectedChannel) return;
+    if (!currentRoomId) return;
     if (!hasMore || loadingMore || messages.length === 0) return;
 
     setLoadingMore(true);
@@ -77,7 +102,7 @@ function Chat({ token, user, onLogout }) {
     const prevHeight = container ? container.scrollHeight : 0;
 
     const res = await fetch(
-      `${API_BASE}/api/messages/${selectedChannel}?before=${encodeURIComponent(oldest.timestamp)}`
+      `${API_BASE}/api/messages/${currentRoomId}?before=${encodeURIComponent(oldest.timestamp)}`
     );
 
     const older = await res.json();
@@ -107,19 +132,41 @@ function Chat({ token, user, onLogout }) {
     }
   };
 
+  const createChannel = async () => {
+    if (!newRoomName.trim()) return;
+
+    await fetch(`${API_BASE}/api/rooms`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name: newRoomName,
+        isPublic
+      })
+    });
+
+    setShowCreateModal(false);
+    setNewRoomName("");
+    setIsPublic(true);
+
+    await loadChannels();
+  };
+
   useEffect(() => {
     loadChannels();
   }, []);
 
   useEffect(() => {
-    if (!selectedChannel) return;
+    if (!currentRoomId) return;
 
     // Reset when switching rooms
     setMessages([]);
     setHasMore(true);
 
-    loadMessages(selectedChannel);
-  }, [selectedChannel]);
+    loadMessages(currentRoomId);
+  }, [currentRoomId]);
 
   useEffect(() => {
     if (!token) return;
@@ -132,27 +179,34 @@ function Chat({ token, user, onLogout }) {
       .build();
 
     connection.on("ReceiveMessage", (msg) => {
-      if (msg.roomId !== selectedChannel) return;
+      if (msg.roomId !== currentRoomId) return;
+
+      const shouldScroll = isNearBottom();
+
       setMessages(prev => [...prev, msg]);
+
+      if (shouldScroll) {
+        setTimeout(scrollToBottom, 50);
+      }
     });
 
     connection.start().then(() => {
       console.log("SignalR connected");
 
-      if (selectedChannel) {
-        connection.invoke("JoinRoom", selectedChannel);
+      if (currentRoomId) {
+        connection.invoke("JoinRoom", currentRoomId);
       }
     });
 
     connectionRef.current = connection;
 
     return () => connection.stop();
-  }, [token, selectedChannel]);
+  }, [token, currentRoomId]);
 
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    await connectionRef.current.invoke("SendMessage", selectedChannel, text);
+    await connectionRef.current.invoke("SendMessage", currentRoomId, text);
     setText("");
   };
 
@@ -160,17 +214,24 @@ function Chat({ token, user, onLogout }) {
     <div className="w-full h-screen flex overflow-hidden">
       <div className="w-64 bg-slate-100 border-r border-slate-200 p-4 flex flex-col">
         <div className="font-semibold mb-1">Channels</div>
-        <div className="text-xs text-slate-500 mb-4">
+        <div className="text-xs text-slate-500 mb-3">
           Logged in as: {user.username}
         </div>
+
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="mb-3 bg-blue-600 text-white text-sm rounded px-3 py-1"
+        >
+          + Add Channel
+        </button>
 
         <div className="space-y-2 flex-1">
           {channels.map(c => (
             <div
               key={c.id}
-              onClick={() => setSelectedChannel(c.id)}
+              onClick={() => setCurrentRoomId(c.id)}
               className={`p-2 rounded cursor-pointer ${
-                selectedChannel === c.id
+                currentRoomId === c.id
                   ? "bg-blue-100"
                   : "hover:bg-slate-200"
               }`}
@@ -239,6 +300,45 @@ function Chat({ token, user, onLogout }) {
           </button>
         </div>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-80 shadow-xl">
+            <h2 className="font-semibold mb-3">Create Channel</h2>
+
+            <input
+              value={newRoomName}
+              onChange={e => setNewRoomName(e.target.value)}
+              placeholder="Channel name"
+              className="w-full border border-slate-200 rounded px-3 py-2 mb-3"
+            />
+
+            <label className="flex items-center gap-2 mb-4 text-sm">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              Public channel
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createChannel}
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
