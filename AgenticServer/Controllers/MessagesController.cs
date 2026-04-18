@@ -33,5 +33,19 @@ namespace AgenticServer.Controllers
 
             return Ok(messages);
         }
+
+        [HttpGet("paged/{roomId}")]
+        public async Task<IActionResult> GetPaged(Guid roomId, [FromQuery] DateTime? ts)
+        {
+            var cursor = ts ?? DateTime.UtcNow;
+
+            var messages = await _context.Messages
+                .Where(m => m.RoomId == roomId && m.Timestamp < cursor)
+                .OrderByDescending(m => m.Timestamp)
+                .Take(20)
+                .ToListAsync();
+
+            return Ok(messages);
+        }
     }
 }
