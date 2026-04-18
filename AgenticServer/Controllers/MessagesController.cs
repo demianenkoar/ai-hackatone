@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AgenticServer.Controllers
 {
     [ApiController]
-    [Route("api/rooms")]
+    [Route("api/messages")]
     public class MessagesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -15,7 +15,7 @@ namespace AgenticServer.Controllers
             _context = context;
         }
 
-        [HttpGet("{roomId}/messages")]
+        [HttpGet("{roomId}")]
         public async Task<IActionResult> GetMessages(
             Guid roomId,
             [FromQuery] DateTime? before,
@@ -29,11 +29,9 @@ namespace AgenticServer.Controllers
                 .Take(limit)
                 .ToListAsync();
 
-            var ordered = messages
-                .OrderBy(m => m.Timestamp)
-                .ToList();
+            messages.Reverse();
 
-            return Ok(ordered);
+            return Ok(messages);
         }
     }
 }
