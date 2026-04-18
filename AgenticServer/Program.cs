@@ -120,22 +120,7 @@ try
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    db.Database.Migrate();
-
-    if (!db.Rooms.Any())
-    {
-        var generalRoom = new Room
-        {
-            Id = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
-            Name = "General",
-            IsPrivate = false,
-            OwnerId = null,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.Rooms.Add(generalRoom);
-        db.SaveChanges();
-    }
+    await DbInitializer.SeedAsync(db);
 }
 catch (Exception ex)
 {
