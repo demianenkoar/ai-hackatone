@@ -53,19 +53,32 @@ function AppContent({ token, setToken }) {
   }, [token]);
 
   const safeFetch = async (url, options = {}) => {
-    const res = await fetch(url, options);
-    if (res.status === 401) return null;
+    const storedToken = localStorage.getItem("token");
+
+    console.log("Token being sent:", storedToken);
+
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${storedToken}`
+      }
+    });
+
+    if (res.status === 401) {
+      console.warn("Unauthorized request:", url);
+      return null;
+    }
+
     return res;
   };
 
   const loadChannels = async () => {
-    const res = await safeFetch(`${API_BASE}/api/channels`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await safeFetch(`${API_BASE}/api/channels`);
 
     if (!res) return;
-    const data = await res.json();
 
+    const data = await res.json();
     setChannels(data);
   };
 
@@ -75,8 +88,7 @@ function AppContent({ token, setToken }) {
     const res = await safeFetch(`${API_BASE}/api/rooms`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         name: newRoomName,
@@ -97,8 +109,7 @@ function AppContent({ token, setToken }) {
     const res = await safeFetch(
       `${API_BASE}/api/rooms/${roomId}/add-user/${userId}`,
       {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+        method: "POST"
       }
     );
 
@@ -116,7 +127,7 @@ function AppContent({ token, setToken }) {
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${API_BASE}/chatHub`, {
-        accessTokenFactory: () => token
+        accessTokenFactory: () => localStorage.getItem("token")
       })
       .withAutomaticReconnect()
       .build();

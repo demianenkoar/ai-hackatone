@@ -34,10 +34,18 @@ export default function AuthPage({ setToken }) {
     }
 
     const data = await res.json();
-    const token = data.token || data;
 
-    localStorage.setItem("token", token);
-    setToken(token);
+    if (!data.token) {
+      console.error("Login response missing token:", data);
+      setMessage("Invalid login response");
+      return;
+    }
+
+    localStorage.setItem("token", data.token);
+
+    console.log("Token saved after login:", localStorage.getItem("token"));
+
+    setToken(data.token);
   };
 
   const register = async () => {
