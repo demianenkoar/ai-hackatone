@@ -2,6 +2,11 @@ import Message from "./Message";
 import MessageInput from "./MessageInput";
 
 export default function ChatArea({ messages, text, setText, sendMessage }) {
+
+  console.log("Messages in ChatArea:", messages);
+
+  const safeMessages = messages || [];
+
   return (
     <div className="flex-1 flex flex-col">
 
@@ -10,7 +15,7 @@ export default function ChatArea({ messages, text, setText, sendMessage }) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]">
-        {messages.map(msg => (
+        {safeMessages.map((msg) => (
           <Message key={msg.id} msg={msg} />
         ))}
       </div>
