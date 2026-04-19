@@ -42,7 +42,8 @@ namespace AgenticServer.Controllers
                     r.Id,
                     r.Name,
                     r.IsPublic,
-                    r.IsPrivate
+                    r.IsPrivate,
+                    r.OwnerId
                 })
                 .ToListAsync();
 
@@ -59,7 +60,8 @@ namespace AgenticServer.Controllers
                 {
                     userId = m.UserId,
                     username = m.User.Username,
-                    m.Role
+                    role = m.Role,
+                    isOwner = m.Role == RoomRole.Owner
                 })
                 .ToListAsync();
 
@@ -140,7 +142,8 @@ namespace AgenticServer.Controllers
                 room.Id,
                 room.Name,
                 room.IsPublic,
-                room.IsPrivate
+                room.IsPrivate,
+                room.OwnerId
             };
 
             await _hub.Clients.User(userId.ToString())
@@ -165,6 +168,34 @@ namespace AgenticServer.Controllers
             await _context.SaveChangesAsync();
 
             return Ok();
+        }
+
+        [HttpDelete("{roomId}")]
+        public async Task<IActionResult> DeleteRoom(Guid roomId)
+        {
+            var userId = CurrentUserId();
+
+            var room = await _context.Rooms
+                .Include(r => r.Members)
+                .FirstOrDefaultAsync(r => r.Id == roomId);
+
+            if (room == null)
+                return NotFound();
+
+            if (room.OwnerId != userId)
+                return Forbid();
+
+            var messages = _context.Messages.Where(m => m.RoomId == roomId);
+            _context.Messages.RemoveRange(messages);
+
+            var members = _context.RoomMembers.Where(m => m.RoomId == roomId);
+            _context.RoomMembers.RemoveRange(members);
+
+            _context.Rooms.Remove(room);
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

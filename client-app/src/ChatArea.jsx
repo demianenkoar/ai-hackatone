@@ -22,6 +22,20 @@ function getCurrentUsername() {
   }
 }
 
+function getCurrentUserId() {
+  try {
+    const token = localStorage.getItem("token");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return (
+      payload.nameid ||
+      payload.sub ||
+      payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]
+    );
+  } catch {
+    return null;
+  }
+}
+
 export default function ChatArea({
   messages,
   setMessages,
@@ -35,6 +49,7 @@ export default function ChatArea({
 
   const { channelId } = useParams();
   const username = getCurrentUsername();
+  const currentUserId = getCurrentUserId();
 
   const safeMessages = messages || [];
 
@@ -299,6 +314,26 @@ export default function ChatArea({
     }
   }
 
+  async function deleteRoom() {
+    if (!channelId) return;
+
+    const confirmed = window.confirm("Delete this room permanently?");
+    if (!confirmed) return;
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${API_BASE}/api/rooms/${channelId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (res.ok) {
+      window.location.href = "/";
+    }
+  }
+
   const typingMessage = typingUsers[channelId];
 
   return (
@@ -309,14 +344,21 @@ export default function ChatArea({
         <div className="teams-header p-3 font-semibold flex justify-between items-center">
           <span>Chat</span>
 
-          {isPrivateChannel && (
+          {channel?.ownerId === currentUserId && (
             <button
-              onClick={() => setShowMembers(!showMembers)}
-              className="text-xs bg-white text-black px-2 py-1 rounded"
+              onClick={deleteRoom}
+              className="text-xs bg-red-500 text-white px-2 py-1 rounded"
             >
-              Members
+              Delete Room
             </button>
           )}
+
+          <button
+            onClick={() => setShowMembers(!showMembers)}
+            className="text-xs bg-white text-black px-2 py-1 rounded"
+          >
+            Members
+          </button>
         </div>
 
         <div
@@ -348,7 +390,7 @@ export default function ChatArea({
 
       </div>
 
-      {showMembers && isPrivateChannel && (
+      {showMembers && (
         <div className="w-64 border-l bg-white flex flex-col">
 
           <div className="p-4 border-b">
@@ -356,32 +398,45 @@ export default function ChatArea({
               Members
             </div>
 
-            <button
-              onClick={() => setShowInvite(true)}
-              className="w-full flex items-center justify-center gap-2 text-sm border rounded py-2"
-              style={{
-                borderColor: "#6264a7",
-                color: "#6264a7",
-                background: "transparent"
-              }}
-            >
-              + Add people
-            </button>
+            {isPrivateChannel && (
+              <button
+                onClick={() => setShowInvite(true)}
+                className="w-full flex items-center justify-center gap-2 text-sm border rounded py-2"
+                style={{
+                  borderColor: "#6264a7",
+                  color: "#6264a7",
+                  background: "transparent"
+                }}
+              >
+                + Add people
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
 
-            {members.map(m => (
-              <div key={m.userId} className="flex items-center gap-2 mb-2">
+            {isPrivateChannel ? (
+              members.map(m => (
+                <div key={m.userId} className="flex items-center gap-2 mb-2">
 
-                <div className="avatar">
-                  {m.username?.charAt(0).toUpperCase()}
+                  <div className="avatar">
+                    {m.username?.charAt(0).toUpperCase()}
+                  </div>
+
+                  <span className="text-sm">
+                    {m.username}
+                    {m.role === 0 && (
+                      <span className="ml-2 text-xs text-gray-500">(owner)</span>
+                    )}
+                  </span>
+
                 </div>
-
-                <span className="text-sm">{m.username}</span>
-
+              ))
+            ) : (
+              <div className="text-sm text-gray-500">
+                Member list is hidden for public channels.
               </div>
-            ))}
+            )}
 
           </div>
 

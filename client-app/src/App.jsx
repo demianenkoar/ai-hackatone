@@ -249,60 +249,63 @@ function AppContent({ token, setToken }) {
   }, [isConnected]);
 
   return (
-    <div className="w-full h-screen flex overflow-hidden bg-white">
+    <div className="w-full h-screen flex justify-center bg-gray-100">
+      <div className="w-full max-w-[1280px] h-screen flex overflow-hidden bg-white shadow">
 
-      <Sidebar
-        channels={channels}
-        unreadCounts={unreadCounts}
-        user={user}
-        onLogout={handleLogout}
-        onCreateChannel={() => setShowCreateModal(true)}
-      />
-
-      <Routes>
-        <Route
-          path="/"
-          element={
-            channels.length > 0
-              ? <Navigate to={`/channel/${channels[0].id}`} />
-              : <div className="flex-1 flex items-center justify-center">Select a channel</div>
-          }
+        <Sidebar
+          channels={channels}
+          unreadCounts={unreadCounts}
+          user={user}
+          onLogout={handleLogout}
+          onCreateChannel={() => setShowCreateModal(true)}
         />
 
-        <Route
-          path="/channel/:channelId"
-          element={
-            <ChatArea
-              messages={messages}
-              setMessages={setMessages}
-              text={text}
-              setText={setText}
-              sendMessage={sendMessage}
-              connectionRef={connectionRef}
-              setCurrentRoom={setCurrentRoom}
-              isConnected={isConnected}
-            />
-          }
-        />
-      </Routes>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              channels.length > 0
+                ? <Navigate to={`/channel/${channels[0].id}`} />
+                : <div className="flex-1 flex items-center justify-center">Select a channel</div>
+            }
+          />
 
-      {showCreateModal && (
-        <CreateRoomModal
-          newRoomName={newRoomName}
-          setNewRoomName={setNewRoomName}
-          isPublic={isPublic}
-          setIsPublic={setIsPublic}
-          createRoom={createRoom}
-          close={() => setShowCreateModal(false)}
-        />
-      )}
+          <Route
+            path="/channel/:channelId"
+            element={
+              <ChatArea
+                messages={messages}
+                setMessages={setMessages}
+                text={text}
+                setText={setText}
+                sendMessage={sendMessage}
+                connectionRef={connectionRef}
+                setCurrentRoom={setCurrentRoom}
+                isConnected={isConnected}
+              />
+            }
+          />
+        </Routes>
 
-      {showInviteModal && (
-        <InviteMemberModal
-          inviteUser={inviteUser}
-          close={() => setShowInviteModal(false)}
-        />
-      )}
+        {showCreateModal && (
+          <CreateRoomModal
+            newRoomName={newRoomName}
+            setNewRoomName={setNewRoomName}
+            isPublic={isPublic}
+            setIsPublic={setIsPublic}
+            createRoom={createRoom}
+            close={() => setShowCreateModal(false)}
+          />
+        )}
+
+        {showInviteModal && (
+          <InviteMemberModal
+            inviteUser={inviteUser}
+            close={() => setShowInviteModal(false)}
+          />
+        )}
+
+      </div>
     </div>
   );
 }
