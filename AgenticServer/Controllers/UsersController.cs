@@ -64,6 +64,9 @@ namespace AgenticServer.Controllers
             var memberships = _context.RoomMembers.Where(rm => rm.UserId == userId);
             _context.RoomMembers.RemoveRange(memberships);
 
+            var ownedRooms = _context.Rooms.Where(r => r.OwnerId == userId);
+            _context.Rooms.RemoveRange(ownedRooms);
+
             await _context.SaveChangesAsync();
 
             _context.Users.Remove(user);
