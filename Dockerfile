@@ -1,13 +1,17 @@
-FROM node:20
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-WORKDIR /app
-
-COPY package*.json ./
-
-RUN npm install
+WORKDIR /src
 
 COPY . .
 
-EXPOSE 5173
+RUN dotnet restore
 
-CMD ["npm", "run", "dev", "--", "--host"]
+RUN dotnet publish AgenticServer -c Release -o /app/publish
+
+WORKDIR /app/publish
+
+EXPOSE 8080
+
+ENV ASPNETCORE_URLS=http://+:8080
+
+CMD ["dotnet", "AgenticServer.dll"]
