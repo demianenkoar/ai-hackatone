@@ -4,6 +4,7 @@ using AgenticServer.Data;
 using AgenticServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace AgenticServer.Hubs
 {
@@ -81,6 +82,19 @@ namespace AgenticServer.Hubs
             Console.WriteLine($"SignalR: broadcasting message to room {roomId}");
 
             await Clients.Group(roomId).SendAsync("ReceiveMessage", dto);
+
+            var members = await _db.RoomMembers
+                .Where(m => m.RoomId == parsedRoomId && m.UserId != senderId)
+                .Select(m => m.UserId)
+                .ToListAsync();
+
+            foreach (var memberId in members)
+            {
+                Console.WriteLine($"Sending unread update for room {roomId} to user {memberId}");
+
+                await Clients.User(memberId.ToString())
+                    .SendAsync("UnreadIncrement", roomId);
+            }
         }
 
         public async Task SendTyping(string roomId, string username)

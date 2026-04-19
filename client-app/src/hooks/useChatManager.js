@@ -63,13 +63,19 @@ export default function useChatManager(connectionRef) {
     if (!connection) return;
 
     const unreadHandler = (roomId) => {
-      setRooms(prev =>
-        prev.map(r =>
+      console.log("SignalR event received: UnreadIncrement", roomId);
+
+      setRooms(prev => {
+        const updated = prev.map(r =>
           String(r.id) === String(roomId)
             ? { ...r, unreadCount: (r.unreadCount || 0) + 1 }
             : r
-        )
-      );
+        );
+
+        console.log("Rooms state after increment:", updated);
+
+        return updated;
+      });
     };
 
     connection.on("UnreadIncrement", unreadHandler);

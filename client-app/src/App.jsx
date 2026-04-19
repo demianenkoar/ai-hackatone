@@ -129,6 +129,7 @@ function AppContent({ token, setToken }) {
       .build();
 
     connection.on("ReceiveMessage", (message) => {
+      console.log("SignalR event received: ReceiveMessage", message);
       console.log("SignalR: New message received", message);
 
       if (!message) return;
