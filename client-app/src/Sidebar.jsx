@@ -16,10 +16,10 @@ export default function Sidebar({
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
 
-  const publicChannels = channels.filter(c => c.isPublic);
+  const publicChannels = channels.filter(c => c.isPublic === true);
 
   const contacts = channels
-    .filter(c => c.isDirect === true || (!c.isPublic && c.ownerId === null))
+    .filter(c => c.isDirect === true)
     .sort((a, b) => {
       const ta = a.lastMessage?.timestamp || 0;
       const tb = b.lastMessage?.timestamp || 0;
@@ -27,7 +27,7 @@ export default function Sidebar({
     });
 
   const privateGroups = channels.filter(
-    c => !c.isPublic && c.ownerId !== null && !c.isDirect
+    c => !c.isPublic && !c.isDirect && c.ownerId !== null
   );
 
   async function searchUsers(query) {

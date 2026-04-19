@@ -247,7 +247,8 @@ namespace AgenticServer.Controllers
                 name = room.Name,
                 isPublic = room.IsPublic,
                 isPrivate = room.IsPrivate,
-                ownerId = room.OwnerId
+                ownerId = room.OwnerId,
+                isDirect = room.OwnerId == null && !room.IsPublic
             };
 
             await _hub.Clients.User(userId.ToString())

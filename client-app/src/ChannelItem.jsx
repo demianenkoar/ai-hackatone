@@ -14,7 +14,7 @@ export default function ChannelItem({ channel, unreadCount, preview, isOnline })
     >
       <div className="relative">
         <div className="avatar">
-          {channel.name?.charAt(0).toUpperCase()}
+          {(channel.name || channel.username || "C").charAt(0).toUpperCase()}
         </div>
 
         {isOnline && (
@@ -24,7 +24,9 @@ export default function ChannelItem({ channel, unreadCount, preview, isOnline })
 
       <div className="flex flex-col flex-1 min-w-0">
         <div className="flex justify-between text-sm">
-          <span className="truncate">{channel.name}</span>
+          <span className="truncate">
+            {channel.name || channel.username || "Conversation"}
+          </span>
 
           {unreadCount > 0 && (
             <span className="bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">
