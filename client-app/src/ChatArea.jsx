@@ -606,8 +606,22 @@ export default function ChatArea({
 
           <div className="flex-1 overflow-y-auto p-4">
 
-            {isPrivateChannel ? (
-              members.slice(0,2).map(m => (
+            {isDirectChat ? (
+              members.slice(0, 2).map(m => (
+                <div key={m.userId} className="flex items-center gap-2 mb-2">
+
+                  <div className="avatar">
+                    {m.username?.charAt(0).toUpperCase()}
+                  </div>
+
+                  <span className="text-sm">
+                    {m.username}
+                  </span>
+
+                </div>
+              ))
+            ) : isPrivateChannel ? (
+              members.map(m => (
                 <div key={m.userId} className="flex items-center justify-between mb-2">
 
                   <div className="flex items-center gap-2">
