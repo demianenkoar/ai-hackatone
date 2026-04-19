@@ -50,6 +50,7 @@ export default function ChatArea({
   const { channelId } = useParams();
   const username = getCurrentUsername();
   const currentUserId = getCurrentUserId();
+  const isOwner = channel?.ownerId && String(channel.ownerId) === String(currentUserId);
 
   const safeMessages = messages || [];
 
@@ -172,10 +173,18 @@ export default function ChatArea({
       });
     };
 
+    const removedHandler = ({ userId }) => {
+      setMembers(prev =>
+        prev.filter(m => String(m.userId) !== String(userId))
+      );
+    };
+
     connection.on("MemberAdded", memberHandler);
+    connection.on("MemberRemoved", removedHandler);
 
     return () => {
       connection.off("MemberAdded", memberHandler);
+      connection.off("MemberRemoved", removedHandler);
     };
 
   }, [connectionRef]);
@@ -334,6 +343,39 @@ export default function ChatArea({
     }
   }
 
+  async function kickUser(userId) {
+    if (!channelId) return;
+
+    const confirmed = window.confirm("Kick this user from the room?");
+    if (!confirmed) return;
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/rooms/${channelId}/kick/${userId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Kick failed");
+        return;
+      }
+
+      setMembers(prev =>
+        prev.filter(m => String(m.userId) !== String(userId))
+      );
+
+    } catch (err) {
+      console.error("Kick request failed", err);
+    }
+  }
+
   const typingMessage = typingUsers[channelId];
 
   return (
@@ -417,18 +459,29 @@ export default function ChatArea({
 
             {isPrivateChannel ? (
               members.map(m => (
-                <div key={m.userId} className="flex items-center gap-2 mb-2">
+                <div key={m.userId} className="flex items-center justify-between mb-2">
 
-                  <div className="avatar">
-                    {m.username?.charAt(0).toUpperCase()}
+                  <div className="flex items-center gap-2">
+                    <div className="avatar">
+                      {m.username?.charAt(0).toUpperCase()}
+                    </div>
+
+                    <span className="text-sm">
+                      {m.username}
+                      {m.role === 0 && (
+                        <span className="ml-2 text-xs text-gray-500">(owner)</span>
+                      )}
+                    </span>
                   </div>
 
-                  <span className="text-sm">
-                    {m.username}
-                    {m.role === 0 && (
-                      <span className="ml-2 text-xs text-gray-500">(owner)</span>
-                    )}
-                  </span>
+                  {isOwner && m.role !== 0 && (
+                    <button
+                      onClick={() => kickUser(m.userId)}
+                      className="text-xs text-red-500 border border-red-500 px-2 py-0.5 rounded hover:bg-red-500 hover:text-white"
+                    >
+                      Kick
+                    </button>
+                  )}
 
                 </div>
               ))

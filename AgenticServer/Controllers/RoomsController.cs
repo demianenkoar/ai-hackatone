@@ -170,6 +170,42 @@ namespace AgenticServer.Controllers
             return Ok();
         }
 
+        [HttpDelete("{roomId}/kick/{userId}")]
+        public async Task<IActionResult> KickUser(Guid roomId, Guid userId)
+        {
+            var currentUserId = CurrentUserId();
+
+            var room = await _context.Rooms
+                .FirstOrDefaultAsync(r => r.Id == roomId);
+
+            if (room == null)
+                return NotFound("Room not found");
+
+            if (room.OwnerId != currentUserId)
+                return Forbid("Only the owner can kick users");
+
+            if (userId == room.OwnerId)
+                return BadRequest("Owner cannot be kicked");
+
+            var membership = await _context.RoomMembers
+                .FirstOrDefaultAsync(m => m.RoomId == roomId && m.UserId == userId);
+
+            if (membership == null)
+                return NotFound("User is not in this room");
+
+            _context.RoomMembers.Remove(membership);
+
+            await _context.SaveChangesAsync();
+
+            await _hub.Clients.User(userId.ToString())
+                .SendAsync("KickedFromRoom", roomId);
+
+            await _hub.Clients.Group(roomId.ToString())
+                .SendAsync("MemberRemoved", new { userId });
+
+            return NoContent();
+        }
+
         [HttpDelete("{roomId}")]
         public async Task<IActionResult> DeleteRoom(Guid roomId)
         {
