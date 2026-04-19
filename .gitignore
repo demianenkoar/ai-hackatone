@@ -1,5 +1,8 @@
 .aider*
 .venv/
+venv/
+__pycache__/
+*.pyc
 # === .NET / Visual Studio ===
 bin/
 obj/
