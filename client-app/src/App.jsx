@@ -250,7 +250,7 @@ function AppContent({ token, setToken }) {
 
   return (
     <div className="w-full h-screen flex justify-center bg-gray-100">
-      <div className="w-full max-w-[1280px] h-screen flex overflow-hidden bg-white shadow">
+      <div className="w-full max-w-[1280px] h-screen flex overflow-hidden bg-white shadow-lg border border-gray-300 rounded-lg">
 
         <Sidebar
           channels={channels}

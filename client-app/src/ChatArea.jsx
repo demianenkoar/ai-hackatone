@@ -185,7 +185,7 @@ export default function ChatArea({
     if (!channelId || !token) return;
 
     async function fetchChannel() {
-      const res = await fetch(`${API_BASE}/api/channels`, {
+      const res = await fetch(`${API_BASE}/api/rooms`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -433,9 +433,22 @@ export default function ChatArea({
                 </div>
               ))
             ) : (
-              <div className="text-sm text-gray-500">
-                Member list is hidden for public channels.
-              </div>
+              members
+                .filter(m => m.role === 0)
+                .map(m => (
+                  <div key={m.userId} className="flex items-center gap-2 mb-2">
+
+                    <div className="avatar">
+                      {m.username?.charAt(0).toUpperCase()}
+                    </div>
+
+                    <span className="text-sm">
+                      {m.username}
+                      <span className="ml-2 text-xs text-gray-500">(owner)</span>
+                    </span>
+
+                  </div>
+                ))
             )}
 
           </div>
