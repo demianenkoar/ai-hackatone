@@ -192,20 +192,14 @@ namespace AgenticServer.Hubs
             }
         }
 
-        public async Task SendTyping(string roomId, string username)
-        {
-            await UpdateActivity(ResolveUserId());
-
-            await Clients.OthersInGroup(roomId)
-                .SendAsync("UserTyping", username, roomId);
-        }
-
         public async Task SendTypingNotification(string roomId, bool isTyping)
         {
             await UpdateActivity(ResolveUserId());
 
             var username = Context.User?.Identity?.Name ?? "User";
-            await Clients.OthersInGroup(roomId).SendAsync("UserTyping", username, isTyping);
+
+            await Clients.OthersInGroup(roomId)
+                .SendAsync("UserTyping", username, roomId, isTyping);
         }
     }
 }

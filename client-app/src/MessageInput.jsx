@@ -15,7 +15,9 @@ export default function MessageInput({
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const fileInputRef = useRef(null);
+
   const lastTypingSentRef = useRef(0);
+  const stopTypingTimeoutRef = useRef(null);
 
   function handleEmojiClick(emojiData) {
     setText((prev) => prev + emojiData.emoji);
@@ -26,14 +28,23 @@ export default function MessageInput({
     setText(value);
 
     const now = Date.now();
+    const connection = connectionRef?.current;
 
-    if (now - lastTypingSentRef.current > 2500) {
-      const connection = connectionRef?.current;
-      if (connection && roomId && username) {
-        connection.invoke("SendTyping", roomId, username).catch(console.error);
-        lastTypingSentRef.current = now;
-      }
+    if (connection && roomId && now - lastTypingSentRef.current > 600) {
+      connection.invoke("SendTypingNotification", roomId, true).catch(console.error);
+      lastTypingSentRef.current = now;
     }
+
+    if (stopTypingTimeoutRef.current) {
+      clearTimeout(stopTypingTimeoutRef.current);
+    }
+
+    stopTypingTimeoutRef.current = setTimeout(() => {
+      const conn = connectionRef?.current;
+      if (conn && roomId) {
+        conn.invoke("SendTypingNotification", roomId, false).catch(console.error);
+      }
+    }, 2000);
   }
 
   async function handleFileChange(e) {

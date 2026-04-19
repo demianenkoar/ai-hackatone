@@ -71,7 +71,6 @@ export default function ChatArea({
 
   const previousRoomRef = useRef(null);
 
-  const typingTimeoutsRef = useRef({});
   const [typingUsers, setTypingUsers] = useState({});
 
   const [members, setMembers] = useState([]);
@@ -154,25 +153,22 @@ export default function ChatArea({
     const connection = connectionRef.current;
     if (!connection) return;
 
-    const typingHandler = (typingUsername, roomId) => {
+    const typingHandler = (typingUsername, roomId, isTyping) => {
       if (String(roomId) !== String(channelId)) return;
 
-      setTypingUsers(prev => ({
-        ...prev,
-        [roomId]: typingUsername
-      }));
-
-      if (typingTimeoutsRef.current[roomId]) {
-        clearTimeout(typingTimeoutsRef.current[roomId]);
-      }
-
-      typingTimeoutsRef.current[roomId] = setTimeout(() => {
+      if (!isTyping) {
         setTypingUsers(prev => {
           const copy = { ...prev };
           delete copy[roomId];
           return copy;
         });
-      }, 4000);
+        return;
+      }
+
+      setTypingUsers(prev => ({
+        ...prev,
+        [roomId]: typingUsername
+      }));
     };
 
     connection.on("UserTyping", typingHandler);
