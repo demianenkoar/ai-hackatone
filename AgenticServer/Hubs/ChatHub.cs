@@ -83,6 +83,12 @@ namespace AgenticServer.Hubs
             await Clients.Group(roomId).SendAsync("ReceiveMessage", dto);
         }
 
+        public async Task SendTyping(string roomId, string username)
+        {
+            await Clients.OthersInGroup(roomId)
+                .SendAsync("UserTyping", username, roomId);
+        }
+
         public async Task SendTypingNotification(string roomId, bool isTyping)
         {
             var username = Context.User?.Identity?.Name ?? "User";
