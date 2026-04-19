@@ -148,5 +148,23 @@ namespace AgenticServer.Controllers
 
             return Ok(memberDto);
         }
+
+        [HttpPost("{roomId}/read")]
+        public async Task<IActionResult> MarkRoomRead(Guid roomId)
+        {
+            var userId = CurrentUserId();
+
+            var membership = await _context.RoomMembers
+                .FirstOrDefaultAsync(m => m.RoomId == roomId && m.UserId == userId);
+
+            if (membership == null)
+                return NotFound("You are not a member of this room.");
+
+            membership.LastReadAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok();
+        }
     }
 }

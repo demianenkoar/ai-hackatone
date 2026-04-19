@@ -12,5 +12,7 @@ namespace AgenticServer.Models
         public bool IsBanned { get; set; }
 
         public Guid? BannedByUserId { get; set; }
+
+        public DateTime? LastReadAt { get; set; }
     }
 }
