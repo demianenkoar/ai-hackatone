@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as signalR from "@microsoft/signalr";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
@@ -234,7 +234,7 @@ function AppContent({ token, setToken }) {
     setToken(null);
   };
 
-  const setCurrentRoom = (roomId) => {
+  const setCurrentRoom = useCallback((roomId) => {
     currentRoomRef.current = roomId;
 
     setUnreadCounts(prev => ({
@@ -246,7 +246,7 @@ function AppContent({ token, setToken }) {
       console.log("Joining room:", roomId);
       connectionRef.current.invoke("JoinRoom", roomId).catch(console.error);
     }
-  };
+  }, [isConnected]);
 
   return (
     <div className="w-full h-screen flex overflow-hidden bg-white">
