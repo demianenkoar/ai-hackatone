@@ -507,6 +507,9 @@ export default function ChatArea({
             <Message
               key={msg.id}
               msg={msg}
+              previousMessage={(isSearching ? searchResults : safeMessages)[
+                (isSearching ? searchResults : safeMessages).findIndex(m => m.id === msg.id) - 1
+              ]}
               onReply={(m) => {
                 setReplyTo(m);
                 setTimeout(() => {

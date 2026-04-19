@@ -53,7 +53,7 @@ function scrollToMessage(messageId) {
   }, 2000);
 }
 
-export default function Message({ msg, onReply }) {
+export default function Message({ msg, previousMessage, onReply }) {
   const [hovered, setHovered] = useState(false);
 
   const time = formatTimestamp(msg.timestamp);
@@ -63,6 +63,24 @@ export default function Message({ msg, onReply }) {
     currentUserId &&
     msg.senderId &&
     String(msg.senderId) === String(currentUserId);
+
+  let showHeader = true;
+
+  if (previousMessage) {
+    const sameUser =
+      previousMessage.senderId &&
+      msg.senderId &&
+      String(previousMessage.senderId) === String(msg.senderId);
+
+    const prevTime = new Date(previousMessage.timestamp).getTime();
+    const currentTime = new Date(msg.timestamp).getTime();
+
+    const within5Minutes = currentTime - prevTime < 5 * 60 * 1000;
+
+    if (sameUser && within5Minutes) {
+      showHeader = false;
+    }
+  }
 
   const content = msg.content || "";
   const isImage = isImageUrl(content);
@@ -76,10 +94,11 @@ export default function Message({ msg, onReply }) {
       className="flex flex-col relative transition-all"
       style={{
         alignSelf: isMine ? "flex-end" : "flex-start",
-        maxWidth: "60%"
+        maxWidth: "60%",
+        marginTop: showHeader ? "12px" : "2px"
       }}
     >
-      {!isMine && (
+      {!isMine && showHeader && (
         <div className="text-xs text-gray-500 mb-1 ml-1">
           {msg.senderName}
         </div>
@@ -98,7 +117,8 @@ export default function Message({ msg, onReply }) {
           borderBottomRightRadius: isMine ? "4px" : "16px",
           borderBottomLeftRadius: isMine ? "16px" : "4px",
           color: isMine ? "white" : "#1f2937",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.08)"
+          boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+          marginTop: showHeader ? "0px" : "2px"
         }}
       >
         {hovered && (
