@@ -1,0 +1,39 @@
+{
+  "Version": 1,
+  "Hash": "pyNoAglfvJZQKYh7ezlIYFpHly94a2UqdGGFcv8wJGA=",
+  "Source": "AgenticServer",
+  "BasePath": "_content/AgenticServer",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "AgenticServer/wwwroot",
+      "Source": "AgenticServer",
+      "ContentRoot": "/home/ademianenko/projects/hackatone/AgenticServer/wwwroot/",
+      "BasePath": "_content/AgenticServer",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/home/ademianenko/projects/hackatone/AgenticServer/wwwroot/index.html",
+      "SourceId": "AgenticServer",
+      "SourceType": "Discovered",
+      "ContentRoot": "/home/ademianenko/projects/hackatone/AgenticServer/wwwroot/",
+      "BasePath": "_content/AgenticServer",
+      "RelativePath": "index.html",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/index.html"
+    }
+  ]
+}
