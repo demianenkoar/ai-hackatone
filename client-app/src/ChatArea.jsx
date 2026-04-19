@@ -47,6 +47,9 @@ export default function ChatArea({
 
   const previousRoomRef = useRef(null);
 
+  const typingTimeoutsRef = useRef({});
+  const [typingUsers, setTypingUsers] = useState({});
+
   const [members, setMembers] = useState([]);
   const [showMembers, setShowMembers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -66,6 +69,39 @@ export default function ChatArea({
     setCurrentRoom(channelId);
 
   }, [channelId, setCurrentRoom]);
+
+  useEffect(() => {
+    const connection = connectionRef.current;
+    if (!connection) return;
+
+    const typingHandler = (typingUsername, roomId) => {
+      if (String(roomId) !== String(channelId)) return;
+
+      setTypingUsers(prev => ({
+        ...prev,
+        [roomId]: typingUsername
+      }));
+
+      if (typingTimeoutsRef.current[roomId]) {
+        clearTimeout(typingTimeoutsRef.current[roomId]);
+      }
+
+      typingTimeoutsRef.current[roomId] = setTimeout(() => {
+        setTypingUsers(prev => {
+          const copy = { ...prev };
+          delete copy[roomId];
+          return copy;
+        });
+      }, 4000);
+    };
+
+    connection.on("UserTyping", typingHandler);
+
+    return () => {
+      connection.off("UserTyping", typingHandler);
+    };
+
+  }, [connectionRef, channelId]);
 
   useEffect(() => {
     const connection = connectionRef.current;
@@ -263,6 +299,8 @@ export default function ChatArea({
     }
   }
 
+  const typingMessage = typingUsers[channelId];
+
   return (
     <div className="flex-1 flex">
 
@@ -292,6 +330,12 @@ export default function ChatArea({
 
           <div ref={messagesEndRef} />
         </div>
+
+        {typingMessage && (
+          <div className="text-sm text-gray-500 px-4 pb-1">
+            {typingMessage} is typing...
+          </div>
+        )}
 
         <MessageInput
           text={text}
