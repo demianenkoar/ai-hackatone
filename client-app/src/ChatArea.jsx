@@ -50,7 +50,6 @@ export default function ChatArea({
   const { channelId } = useParams();
   const username = getCurrentUsername();
   const currentUserId = getCurrentUserId();
-  const isOwner = channel?.ownerId && String(channel.ownerId) === String(currentUserId);
 
   const safeMessages = messages || [];
 
@@ -70,6 +69,10 @@ export default function ChatArea({
   const [showMembers, setShowMembers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [channel, setChannel] = useState(null);
+
+  const isOwner =
+    channel?.ownerId &&
+    String(channel.ownerId) === String(currentUserId);
 
   const isPrivateChannel =
     !channel ||
