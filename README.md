@@ -39,35 +39,40 @@ The application supports:
 
 Requirements
 
-To run the project you need:
+To run the project you only need:
 
 - Docker
 - Docker Compose
+- Git
 
 Install Docker:
 https://docs.docker.com/get-docker/
 
 ------------------------------------------------
 
-Run the application
+Quick QA Test (Recommended)
 
-Clone the repository:
+This is the simplest way to run the entire application.
+
+1. Clone the repository
 
 git clone https://github.com/demianenkoar/ai-hackatone.git
 
-Enter the project folder:
+2. Enter the project folder
 
 cd ai-hackatone
 
-Start the application:
+3. Start the full application stack
 
 docker compose up --build
+
+The first startup may take a few minutes because Docker must build the images.
 
 ------------------------------------------------
 
 Access the application
 
-Frontend (React):
+Frontend (Chat UI):
 http://localhost:5173
 
 Backend API:
@@ -81,14 +86,28 @@ SQL Server running inside Docker
 
 ------------------------------------------------
 
-First run
+First run behavior
 
-On the first startup the application will:
+On the first startup the application will automatically:
 
 - start SQL Server
 - start the .NET API
 - run database migrations
 - seed initial data
+
+------------------------------------------------
+
+Stopping the application
+
+Press:
+
+CTRL + C
+
+To stop the containers.
+
+To remove containers:
+
+docker compose down
 
 ------------------------------------------------
 
@@ -105,7 +124,7 @@ Runs the full stack with one command
 
 ------------------------------------------------
 
-Development
+Development (optional)
 
 Backend:
 
