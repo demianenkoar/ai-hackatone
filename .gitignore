@@ -1,1 +1,42 @@
 .aider*
+# === .NET / Visual Studio ===
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# === Node.js / React ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === Databases ===
+*.db
+*.db-shm
+*.db-wal
+App_Data/
+
+# === OS specific files ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === User-specific uploads (якщо є папка для аватарів/файлів) ===
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
