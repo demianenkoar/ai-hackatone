@@ -159,7 +159,7 @@ export default function Sidebar({
           unreadCount={unreadCounts?.[c.id] || 0}
           preview={c.lastMessage?.content}
           timestamp={c.lastMessage?.timestamp}
-          isOnline={onlineUsers?.[c.userId]}
+          isOnline={onlineUsers?.[c.userId] || "offline"}
         />
       ))}
 

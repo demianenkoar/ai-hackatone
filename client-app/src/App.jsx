@@ -161,19 +161,11 @@ function AppContent({ token, setToken }) {
       }));
     });
 
-    connection.on("UserOnline", (userId) => {
+    connection.on("UserPresenceChanged", ({ userId, status }) => {
       setOnlineUsers(prev => ({
         ...prev,
-        [userId]: true
+        [userId]: status
       }));
-    });
-
-    connection.on("UserOffline", (userId) => {
-      setOnlineUsers(prev => {
-        const copy = { ...prev };
-        delete copy[userId];
-        return copy;
-      });
     });
 
     connection.on("MessageDeleted", ({ id }) => {
@@ -250,8 +242,7 @@ function AppContent({ token, setToken }) {
     return () => {
       connection.off("ReceiveMessage");
       connection.off("UnreadIncrement");
-      connection.off("UserOnline");
-      connection.off("UserOffline");
+      connection.off("UserPresenceChanged");
       connection.off("MessageDeleted");
       connection.off("NewRoomAdded");
       connection.off("RoomDeleted");

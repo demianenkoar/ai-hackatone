@@ -14,6 +14,35 @@ namespace AgenticServer.Hubs
         private readonly ApplicationDbContext _db;
 
         private static ConcurrentDictionary<string, string> OnlineUsers = new();
+        private static ConcurrentDictionary<string, DateTime> LastActivity = new();
+
+        private static Timer? PresenceTimer;
+
+        static ChatHub()
+        {
+            PresenceTimer = new Timer(async _ =>
+            {
+                var now = DateTime.UtcNow;
+
+                foreach (var entry in LastActivity)
+                {
+                    var diff = now - entry.Value;
+
+                    if (diff.TotalMinutes > 5)
+                    {
+                        var hub = Program.ServiceProvider
+                            .GetRequiredService<IHubContext<ChatHub>>();
+
+                        await hub.Clients.All.SendAsync("UserPresenceChanged", new
+                        {
+                            userId = entry.Key,
+                            status = "afk"
+                        });
+                    }
+                }
+
+            }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
 
         public ChatHub(ApplicationDbContext db)
         {
@@ -30,12 +59,31 @@ namespace AgenticServer.Hubs
             return Guid.Parse(claimId);
         }
 
+        private async Task UpdateActivity(Guid userId)
+        {
+            var id = userId.ToString();
+
+            LastActivity[id] = DateTime.UtcNow;
+
+            await Clients.All.SendAsync("UserPresenceChanged", new
+            {
+                userId = id,
+                status = "online"
+            });
+        }
+
         public override async Task OnConnectedAsync()
         {
             var userId = ResolveUserId().ToString();
-            OnlineUsers[userId] = Context.ConnectionId;
 
-            await Clients.All.SendAsync("UserOnline", userId);
+            OnlineUsers[userId] = Context.ConnectionId;
+            LastActivity[userId] = DateTime.UtcNow;
+
+            await Clients.All.SendAsync("UserPresenceChanged", new
+            {
+                userId = userId,
+                status = "online"
+            });
 
             await base.OnConnectedAsync();
         }
@@ -46,7 +94,11 @@ namespace AgenticServer.Hubs
 
             OnlineUsers.TryRemove(userId, out _);
 
-            await Clients.All.SendAsync("UserOffline", userId);
+            await Clients.All.SendAsync("UserPresenceChanged", new
+            {
+                userId = userId,
+                status = "offline"
+            });
 
             await base.OnDisconnectedAsync(ex);
         }
@@ -67,6 +119,8 @@ namespace AgenticServer.Hubs
         {
             var senderId = ResolveUserId();
             var parsedRoomId = Guid.Parse(roomId);
+
+            await UpdateActivity(senderId);
 
             Guid? replyGuid = null;
 
@@ -140,12 +194,16 @@ namespace AgenticServer.Hubs
 
         public async Task SendTyping(string roomId, string username)
         {
+            await UpdateActivity(ResolveUserId());
+
             await Clients.OthersInGroup(roomId)
                 .SendAsync("UserTyping", username, roomId);
         }
 
         public async Task SendTypingNotification(string roomId, bool isTyping)
         {
+            await UpdateActivity(ResolveUserId());
+
             var username = Context.User?.Identity?.Name ?? "User";
             await Clients.OthersInGroup(roomId).SendAsync("UserTyping", username, isTyping);
         }

@@ -76,6 +76,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
+Program.ServiceProvider = app.Services;
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -130,3 +132,8 @@ catch (Exception ex)
 }
 
 app.Run();
+
+public partial class Program
+{
+    public static IServiceProvider ServiceProvider { get; set; } = default!;
+}

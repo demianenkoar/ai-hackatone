@@ -17,8 +17,16 @@ export default function ChannelItem({ channel, unreadCount, preview, isOnline })
           {(channel.name || channel.username || "C").charAt(0).toUpperCase()}
         </div>
 
-        {isOnline && (
+        {isOnline === "online" && (
           <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-white"></div>
+        )}
+
+        {isOnline === "afk" && (
+          <div className="absolute bottom-0 right-0 w-2 h-2 bg-yellow-400 rounded-full border border-white"></div>
+        )}
+
+        {isOnline === "offline" && (
+          <div className="absolute bottom-0 right-0 w-2 h-2 bg-gray-400 rounded-full border border-white"></div>
         )}
       </div>
 
