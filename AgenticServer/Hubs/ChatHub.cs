@@ -40,14 +40,18 @@ namespace AgenticServer.Hubs
         public async Task JoinRoom(string roomId)
         {
             Console.WriteLine($"SignalR: connection {Context.ConnectionId} joining room {roomId}");
-
             await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        }
+
+        public async Task LeaveRoom(string roomId)
+        {
+            Console.WriteLine($"SignalR: connection {Context.ConnectionId} leaving room {roomId}");
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
         }
 
         public async Task SendMessage(string roomId, string content)
         {
             var senderId = ResolveUserId();
-
             var parsedRoomId = Guid.Parse(roomId);
 
             var message = new Message

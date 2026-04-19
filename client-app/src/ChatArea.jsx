@@ -28,6 +28,8 @@ export default function ChatArea({
   const prevHeightRef = useRef(0);
   const isPrependingRef = useRef(false);
 
+  const previousRoomRef = useRef(null);
+
   const [members, setMembers] = useState([]);
   const [showMembers, setShowMembers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -47,6 +49,28 @@ export default function ChatArea({
     setCurrentRoom(channelId);
 
   }, [channelId, setCurrentRoom]);
+
+  useEffect(() => {
+    const connection = connectionRef.current;
+    if (!connection || !isConnected || !channelId) return;
+
+    async function switchRooms() {
+      try {
+        if (previousRoomRef.current) {
+          await connection.invoke("LeaveRoom", previousRoomRef.current);
+        }
+
+        await connection.invoke("JoinRoom", channelId);
+
+        previousRoomRef.current = channelId;
+      } catch (err) {
+        console.error("SignalR room switch failed", err);
+      }
+    }
+
+    switchRooms();
+
+  }, [channelId, connectionRef, isConnected]);
 
   const fetchMembers = useCallback(async () => {
     const token = localStorage.getItem("token");
