@@ -270,10 +270,8 @@ export default function ChatArea({
   }, [channelId]);
 
   useEffect(() => {
-    if (isPrivateChannel) {
-      fetchMembers();
-    }
-  }, [channelId, channel, isPrivateChannel, fetchMembers]);
+    fetchMembers();
+  }, [channelId, fetchMembers]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -636,7 +634,7 @@ export default function ChatArea({
               ))
             ) : (
               members
-                .filter(m => m.role === 0)
+                .filter(m => m.isOwner)
                 .map(m => (
                   <div key={m.userId} className="flex items-center gap-2 mb-2">
 

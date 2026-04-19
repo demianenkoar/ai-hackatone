@@ -88,16 +88,17 @@ export default function Message({ msg, onReply }) {
       <div
         className="px-4 py-2 text-sm"
         style={{
-          backgroundColor: hovered
-            ? "#eef2ff"
-            : isMine
+          backgroundColor: isMine
+            ? "#6366f1"
+            : hovered
             ? "#eef2ff"
             : "#f8fafc",
-          border: isMine ? "none" : "1px solid #e1e1e1",
-          borderRadius: "14px",
-          borderBottomRightRadius: isMine ? "0px" : "14px",
-          borderBottomLeftRadius: isMine ? "14px" : "0px",
-          color: "#1f2937"
+          border: isMine ? "none" : "1px solid #e2e8f0",
+          borderRadius: "16px",
+          borderBottomRightRadius: isMine ? "4px" : "16px",
+          borderBottomLeftRadius: isMine ? "16px" : "4px",
+          color: isMine ? "white" : "#1f2937",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.08)"
         }}
       >
         {hovered && (
@@ -151,7 +152,7 @@ export default function Message({ msg, onReply }) {
         )}
 
         <div
-          className="text-xs text-gray-500 mt-1"
+          className={`text-xs mt-1 ${isMine ? "text-indigo-200" : "text-gray-500"}`}
           style={{ textAlign: "right" }}
         >
           {time}
