@@ -38,11 +38,11 @@ namespace AgenticServer.Controllers
                 .Where(r => r.IsPublic || r.Members.Any(m => m.UserId == userId))
                 .Select(r => new
                 {
-                    r.Id,
-                    r.Name,
-                    r.IsPublic,
-                    r.IsPrivate,
-                    r.OwnerId,
+                    id = r.Id,
+                    name = r.Name,
+                    isPublic = r.IsPublic,
+                    isPrivate = r.IsPrivate,
+                    ownerId = r.OwnerId,
                     isDirect = r.OwnerId == null && !r.IsPublic,
                     lastMessage = _context.Messages
                         .Where(m => m.RoomId == r.Id)
@@ -106,11 +106,11 @@ namespace AgenticServer.Controllers
 
             var roomDto = new
             {
-                room.Id,
-                room.Name,
-                room.IsPublic,
-                room.IsPrivate,
-                room.OwnerId
+                id = room.Id,
+                name = room.Name,
+                isPublic = room.IsPublic,
+                isPrivate = room.IsPrivate,
+                ownerId = room.OwnerId
             };
 
             if (room.IsPublic)
@@ -145,11 +145,11 @@ namespace AgenticServer.Controllers
             {
                 return Ok(new
                 {
-                    existing.Id,
-                    existing.Name,
-                    existing.IsPublic,
-                    existing.IsPrivate,
-                    existing.OwnerId,
+                    id = existing.Id,
+                    name = existing.Name,
+                    isPublic = existing.IsPublic,
+                    isPrivate = existing.IsPrivate,
+                    ownerId = existing.OwnerId,
                     isDirect = true
                 });
             }
@@ -188,11 +188,11 @@ namespace AgenticServer.Controllers
 
             var roomDto = new
             {
-                room.Id,
-                room.Name,
-                room.IsPublic,
-                room.IsPrivate,
-                room.OwnerId,
+                id = room.Id,
+                name = room.Name,
+                isPublic = room.IsPublic,
+                isPrivate = room.IsPrivate,
+                ownerId = room.OwnerId,
                 isDirect = true
             };
 
@@ -243,11 +243,11 @@ namespace AgenticServer.Controllers
 
             var roomDto = new
             {
-                room.Id,
-                room.Name,
-                room.IsPublic,
-                room.IsPrivate,
-                room.OwnerId
+                id = room.Id,
+                name = room.Name,
+                isPublic = room.IsPublic,
+                isPrivate = room.IsPrivate,
+                ownerId = room.OwnerId
             };
 
             await _hub.Clients.User(userId.ToString())
