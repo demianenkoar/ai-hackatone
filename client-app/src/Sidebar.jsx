@@ -5,7 +5,7 @@ const API_BASE = "http://localhost:58097";
 
 export default function Sidebar({
   channels,
-  currentRoomId,
+  unreadCounts,
   user,
   onLogout,
   onCreateChannel
@@ -54,12 +54,20 @@ export default function Sidebar({
 
       <div className="text-xs font-semibold text-slate-500 mt-2">Public Channels</div>
       {publicChannels.map(c => (
-        <ChannelItem key={c.id} channel={c} />
+        <ChannelItem
+          key={c.id}
+          channel={c}
+          unreadCount={unreadCounts?.[c.id] || 0}
+        />
       ))}
 
       <div className="text-xs font-semibold text-slate-500 mt-4">Private Groups</div>
       {privateChannels.map(c => (
-        <ChannelItem key={c.id} channel={c} />
+        <ChannelItem
+          key={c.id}
+          channel={c}
+          unreadCount={unreadCounts?.[c.id] || 0}
+        />
       ))}
 
       <button

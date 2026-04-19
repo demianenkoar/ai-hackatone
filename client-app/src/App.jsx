@@ -39,6 +39,7 @@ function AppContent({ token, setToken }) {
   const [channels, setChannels] = useState([]);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState({});
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -141,6 +142,24 @@ function AppContent({ token, setToken }) {
       });
     });
 
+    connection.on("UnreadIncrement", (roomId) => {
+      console.log("SignalR event received: UnreadIncrement", roomId);
+
+      const currentRoom = currentRoomRef.current;
+
+      if (String(roomId) === String(currentRoom)) {
+        console.log("Ignoring unread for active room");
+        return;
+      }
+
+      console.log("Incrementing unread for room:", roomId);
+
+      setUnreadCounts(prev => ({
+        ...prev,
+        [roomId]: (prev[roomId] || 0) + 1
+      }));
+    });
+
     connection.on("NewRoomAdded", (room) => {
       console.log("SignalR: NewRoomAdded", room);
 
@@ -187,6 +206,7 @@ function AppContent({ token, setToken }) {
 
     return () => {
       connection.off("ReceiveMessage");
+      connection.off("UnreadIncrement");
       connection.off("NewRoomAdded");
       connection.stop();
     };
@@ -217,6 +237,11 @@ function AppContent({ token, setToken }) {
   const setCurrentRoom = (roomId) => {
     currentRoomRef.current = roomId;
 
+    setUnreadCounts(prev => ({
+      ...prev,
+      [roomId]: 0
+    }));
+
     if (connectionRef.current && isConnected) {
       console.log("Joining room:", roomId);
       connectionRef.current.invoke("JoinRoom", roomId).catch(console.error);
@@ -228,6 +253,7 @@ function AppContent({ token, setToken }) {
 
       <Sidebar
         channels={channels}
+        unreadCounts={unreadCounts}
         user={user}
         onLogout={handleLogout}
         onCreateChannel={() => setShowCreateModal(true)}
