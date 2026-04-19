@@ -26,6 +26,18 @@ function getCurrentUserId() {
   }
 }
 
+function isImageUrl(url) {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.endsWith(".png") ||
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".gif") ||
+    lower.endsWith(".webp")
+  );
+}
+
 export default function Message({ msg }) {
   const time = formatTimestamp(msg.timestamp);
   const currentUserId = getCurrentUserId();
@@ -34,6 +46,10 @@ export default function Message({ msg }) {
     currentUserId &&
     msg.senderId &&
     String(msg.senderId) === String(currentUserId);
+
+  const content = msg.content || "";
+  const isImage = isImageUrl(content);
+  const isFileLink = content.startsWith("/uploads/");
 
   return (
     <div
@@ -60,7 +76,35 @@ export default function Message({ msg }) {
           color: "#1f2937"
         }}
       >
-        <div>{msg.content}</div>
+        {!isFileLink && (
+          <div>{content}</div>
+        )}
+
+        {isImage && (
+          <div className="mt-1">
+            <img
+              src={`http://localhost:58097${content}`}
+              alt="attachment"
+              style={{
+                maxWidth: "250px",
+                borderRadius: "6px"
+              }}
+            />
+          </div>
+        )}
+
+        {isFileLink && !isImage && (
+          <div className="mt-1">
+            <a
+              href={`http://localhost:58097${content}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Download file
+            </a>
+          </div>
+        )}
 
         <div
           className="text-xs text-gray-500 mt-1"
