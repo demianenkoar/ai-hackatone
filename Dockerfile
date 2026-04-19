@@ -1,17 +1,13 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
+FROM node:20-alpine
 
-COPY AgenticServer/AgenticServer.csproj AgenticServer/
-RUN dotnet restore AgenticServer/AgenticServer.csproj
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
 
 COPY . .
-WORKDIR /src/AgenticServer
-RUN dotnet publish -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
-WORKDIR /app
-COPY --from=build /app/publish .
+EXPOSE 5173
 
-EXPOSE 8080
-
-ENTRYPOINT ["dotnet", "AgenticServer.dll"]
+CMD ["npm", "run", "dev", "--", "--host"]
