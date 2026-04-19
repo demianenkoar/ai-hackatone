@@ -140,7 +140,8 @@ namespace AgenticServer.Controllers
                     existing.Name,
                     existing.IsPublic,
                     existing.IsPrivate,
-                    existing.OwnerId
+                    existing.OwnerId,
+                    isDirect = true
                 });
             }
 
@@ -182,7 +183,8 @@ namespace AgenticServer.Controllers
                 room.Name,
                 room.IsPublic,
                 room.IsPrivate,
-                room.OwnerId
+                room.OwnerId,
+                isDirect = true
             };
 
             await _hub.Clients.User(userId.ToString())
