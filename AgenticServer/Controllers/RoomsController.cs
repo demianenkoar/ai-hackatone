@@ -111,6 +111,10 @@ namespace AgenticServer.Controllers
             if (user == null)
                 return NotFound("User not found.");
 
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room == null)
+                return NotFound("Room not found.");
+
             var member = new RoomMember
             {
                 RoomId = roomId,
@@ -121,7 +125,7 @@ namespace AgenticServer.Controllers
             _context.RoomMembers.Add(member);
             await _context.SaveChangesAsync();
 
-            var dto = new
+            var memberDto = new
             {
                 userId = user.Id,
                 username = user.Username,
@@ -129,12 +133,20 @@ namespace AgenticServer.Controllers
             };
 
             await _hub.Clients.Group(roomId.ToString())
-                .SendAsync("MemberAdded", dto);
+                .SendAsync("MemberAdded", memberDto);
+
+            var roomDto = new
+            {
+                room.Id,
+                room.Name,
+                room.IsPublic,
+                room.IsPrivate
+            };
 
             await _hub.Clients.User(userId.ToString())
-                .SendAsync("RoomAdded", roomId.ToString());
+                .SendAsync("NewRoomAdded", roomDto);
 
-            return Ok(dto);
+            return Ok(memberDto);
         }
     }
 }
