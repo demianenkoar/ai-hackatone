@@ -15,11 +15,13 @@ namespace AgenticServer.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IWebHostEnvironment _env;
 
-        public MessagesController(ApplicationDbContext context, IHubContext<ChatHub> hubContext)
+        public MessagesController(ApplicationDbContext context, IHubContext<ChatHub> hubContext, IWebHostEnvironment env)
         {
             _context = context;
             _hubContext = hubContext;
+            _env = env;
         }
 
         [HttpGet("{roomId}")]
@@ -99,6 +101,30 @@ namespace AgenticServer.Controllers
                 .SendAsync("ReceiveMessage", messageDto);
 
             return Ok(messageDto);
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> Upload(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            var uploadsFolder = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var fileUrl = $"/uploads/{fileName}";
+
+            return Ok(new { url = fileUrl });
         }
 
         [HttpGet("history")]
