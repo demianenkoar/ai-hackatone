@@ -163,7 +163,7 @@ function AppContent({ token, setToken }) {
     connection.on("MessageDeleted", ({ id }) => {
       setMessages(prev =>
         prev.map(m =>
-          m.id === id
+          String(m.id) === String(id)
             ? { ...m, content: "", isDeleted: true }
             : m
         )

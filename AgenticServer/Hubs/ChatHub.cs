@@ -103,7 +103,8 @@ namespace AgenticServer.Hubs
                 replyToMessageId = message.ReplyToMessageId,
                 replyTo = replyTo,
                 content = message.Content,
-                timestamp = message.Timestamp
+                timestamp = message.Timestamp,
+                isDeleted = message.IsDeleted
             };
 
             Console.WriteLine($"SignalR: broadcasting message to room {roomId}");
