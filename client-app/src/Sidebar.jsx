@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ChannelItem from "./ChannelItem";
 import RoomControls from "./RoomControls";
 
@@ -10,8 +11,57 @@ export default function Sidebar({
   onLogout,
   onCreateChannel
 }) {
+
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+
   const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
   const privateChannels = channels.filter(c => (c.isPrivate ?? !c.isPublic));
+
+  const contacts = privateChannels.filter(c => !c.ownerId);
+  const privateGroups = privateChannels.filter(c => c.ownerId);
+
+  async function searchUsers(query) {
+    const token = localStorage.getItem("token");
+
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
+    const res = await fetch(
+      `${API_BASE}/api/users/search?query=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    setResults(data);
+  }
+
+  async function startDirectChat(userItem) {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${API_BASE}/api/rooms/direct/${userItem.id}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!res.ok) return;
+
+    const room = await res.json();
+
+    window.location.href = `/channel/${room.id}`;
+
+    setSearch("");
+    setResults([]);
+  }
 
   async function handleDeleteAccount() {
     const confirmed = window.confirm(
@@ -52,6 +102,27 @@ export default function Sidebar({
         Logged in as: {user.username}
       </div>
 
+      <input
+        value={search}
+        onChange={(e) => {
+          const v = e.target.value;
+          setSearch(v);
+          searchUsers(v);
+        }}
+        placeholder="Search users..."
+        className="text-sm border rounded px-2 py-1 mb-2"
+      />
+
+      {results.map(u => (
+        <div
+          key={u.id}
+          onClick={() => startDirectChat(u)}
+          className="text-sm p-1 cursor-pointer hover:bg-slate-100 rounded"
+        >
+          {u.username}
+        </div>
+      ))}
+
       <div className="text-xs font-semibold text-slate-500 mt-2">Public Channels</div>
       {publicChannels.map(c => (
         <ChannelItem
@@ -61,8 +132,17 @@ export default function Sidebar({
         />
       ))}
 
+      <div className="text-xs font-semibold text-slate-500 mt-4">Contacts</div>
+      {contacts.map(c => (
+        <ChannelItem
+          key={c.id}
+          channel={c}
+          unreadCount={unreadCounts?.[c.id] || 0}
+        />
+      ))}
+
       <div className="text-xs font-semibold text-slate-500 mt-4">Private Groups</div>
-      {privateChannels.map(c => (
+      {privateGroups.map(c => (
         <ChannelItem
           key={c.id}
           channel={c}

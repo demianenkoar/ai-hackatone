@@ -144,7 +144,6 @@ export default function ChatArea({
   useEffect(() => {
     if (!channelId) return;
 
-    console.log("Room changed, setting current room:", channelId);
     setCurrentRoom(channelId);
 
   }, [channelId, setCurrentRoom]);
@@ -227,8 +226,6 @@ export default function ChatArea({
     if (!connection) return;
 
     const memberHandler = (newMember) => {
-      console.log("SignalR: MemberAdded", newMember);
-
       setMembers(prev => {
         const exists = prev.some(m => String(m.userId) === String(newMember.userId));
         if (exists) return prev;
@@ -480,7 +477,7 @@ export default function ChatArea({
 
           </div>
 
-          {channel?.ownerId === currentUserId && (
+          {(!channel?.ownerId || channel?.ownerId === currentUserId) && (
             <button
               onClick={deleteRoom}
               className="text-xs bg-red-500 text-white px-2 py-1 rounded"
@@ -608,7 +605,7 @@ export default function ChatArea({
           <div className="flex-1 overflow-y-auto p-4">
 
             {isPrivateChannel ? (
-              members.map(m => (
+              members.slice(0,2).map(m => (
                 <div key={m.userId} className="flex items-center justify-between mb-2">
 
                   <div className="flex items-center gap-2">

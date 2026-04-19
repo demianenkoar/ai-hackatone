@@ -117,6 +117,81 @@ namespace AgenticServer.Controllers
             return Ok(roomDto);
         }
 
+        [HttpPost("direct/{userId}")]
+        public async Task<IActionResult> CreateDirectRoom(Guid userId)
+        {
+            var currentUserId = CurrentUserId();
+
+            if (userId == currentUserId)
+                return BadRequest("Cannot create DM with yourself.");
+
+            var existing = await _context.Rooms
+                .Where(r => !r.IsPublic)
+                .Where(r => r.Members.Count == 2)
+                .Where(r =>
+                    r.Members.Any(m => m.UserId == currentUserId) &&
+                    r.Members.Any(m => m.UserId == userId))
+                .FirstOrDefaultAsync();
+
+            if (existing != null)
+            {
+                return Ok(new
+                {
+                    existing.Id,
+                    existing.Name,
+                    existing.IsPublic,
+                    existing.IsPrivate,
+                    existing.OwnerId
+                });
+            }
+
+            var otherUser = await _context.Users.FindAsync(userId);
+            if (otherUser == null)
+                return NotFound();
+
+            var room = new Room
+            {
+                Id = Guid.NewGuid(),
+                Name = otherUser.Username,
+                IsPublic = false,
+                IsPrivate = true,
+                OwnerId = null,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Rooms.Add(room);
+
+            _context.RoomMembers.Add(new RoomMember
+            {
+                RoomId = room.Id,
+                UserId = currentUserId,
+                Role = RoomRole.Member
+            });
+
+            _context.RoomMembers.Add(new RoomMember
+            {
+                RoomId = room.Id,
+                UserId = userId,
+                Role = RoomRole.Member
+            });
+
+            await _context.SaveChangesAsync();
+
+            var roomDto = new
+            {
+                room.Id,
+                room.Name,
+                room.IsPublic,
+                room.IsPrivate,
+                room.OwnerId
+            };
+
+            await _hub.Clients.User(userId.ToString())
+                .SendAsync("NewRoomAdded", roomDto);
+
+            return Ok(roomDto);
+        }
+
         [HttpPost("{roomId}/add-user/{userId}")]
         public async Task<IActionResult> AddUserToRoom(Guid roomId, Guid userId)
         {
@@ -237,7 +312,7 @@ namespace AgenticServer.Controllers
             if (room == null)
                 return NotFound();
 
-            if (room.OwnerId != userId)
+            if (room.OwnerId != userId && room.OwnerId != null)
                 return Forbid();
 
             var memberIds = await _context.RoomMembers
