@@ -95,7 +95,26 @@ namespace AgenticServer.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(room);
+            var roomDto = new
+            {
+                room.Id,
+                room.Name,
+                room.IsPublic,
+                room.IsPrivate,
+                room.OwnerId
+            };
+
+            if (room.IsPublic)
+            {
+                await _hub.Clients.All.SendAsync("NewRoomAdded", roomDto);
+            }
+            else
+            {
+                await _hub.Clients.User(userId.ToString())
+                    .SendAsync("NewRoomAdded", roomDto);
+            }
+
+            return Ok(roomDto);
         }
 
         [HttpPost("{roomId}/add-user/{userId}")]
