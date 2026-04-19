@@ -35,7 +35,20 @@ namespace AgenticServer.Hubs
             var userId = ResolveUserId().ToString();
             OnlineUsers[userId] = Context.ConnectionId;
 
+            await Clients.All.SendAsync("UserOnline", userId);
+
             await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? ex)
+        {
+            var userId = ResolveUserId().ToString();
+
+            OnlineUsers.TryRemove(userId, out _);
+
+            await Clients.All.SendAsync("UserOffline", userId);
+
+            await base.OnDisconnectedAsync(ex);
         }
 
         public async Task JoinRoom(string roomId)

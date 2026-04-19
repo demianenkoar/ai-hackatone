@@ -40,6 +40,7 @@ function AppContent({ token, setToken }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState({});
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -138,9 +139,6 @@ function AppContent({ token, setToken }) {
       .build();
 
     connection.on("ReceiveMessage", (message) => {
-      console.log("SignalR event received: ReceiveMessage", message);
-      console.log("SignalR: New message received", message);
-
       if (!message) return;
 
       setMessages((prev) => {
@@ -151,21 +149,31 @@ function AppContent({ token, setToken }) {
     });
 
     connection.on("UnreadIncrement", (roomId) => {
-      console.log("SignalR event received: UnreadIncrement", roomId);
-
       const currentRoom = currentRoomRef.current;
 
       if (String(roomId) === String(currentRoom)) {
-        console.log("Ignoring unread for active room");
         return;
       }
-
-      console.log("Incrementing unread for room:", roomId);
 
       setUnreadCounts(prev => ({
         ...prev,
         [roomId]: (prev[roomId] || 0) + 1
       }));
+    });
+
+    connection.on("UserOnline", (userId) => {
+      setOnlineUsers(prev => ({
+        ...prev,
+        [userId]: true
+      }));
+    });
+
+    connection.on("UserOffline", (userId) => {
+      setOnlineUsers(prev => {
+        const copy = { ...prev };
+        delete copy[userId];
+        return copy;
+      });
     });
 
     connection.on("MessageDeleted", ({ id }) => {
@@ -179,8 +187,6 @@ function AppContent({ token, setToken }) {
     });
 
     connection.on("NewRoomAdded", (room) => {
-      console.log("SignalR: NewRoomAdded", room);
-
       if (!room) return;
 
       setChannels((prev) => {
@@ -191,8 +197,6 @@ function AppContent({ token, setToken }) {
     });
 
     connection.on("RoomDeleted", (roomId) => {
-      console.log("Room deleted:", roomId);
-
       setChannels(prev =>
         prev.filter(r => String(r.id) !== String(roomId))
       );
@@ -216,30 +220,25 @@ function AppContent({ token, setToken }) {
       }
     });
 
-    connection.onreconnecting((err) => {
-      console.log("Reconnecting...", err);
+    connection.onreconnecting(() => {
       setIsConnected(false);
     });
 
     connection.onreconnected(() => {
-      console.log("Reconnected!");
       setIsConnected(true);
 
       if (currentRoomRef.current) {
-        console.log("Rejoining room after reconnect:", currentRoomRef.current);
         connection.invoke("JoinRoom", currentRoomRef.current).catch(console.error);
       }
     });
 
-    connection.onclose((err) => {
-      console.log("Connection closed.", err);
+    connection.onclose(() => {
       setIsConnected(false);
     });
 
     connection
       .start()
       .then(() => {
-        console.log("SignalR: Connected");
         setIsConnected(true);
       })
       .catch((err) => {
@@ -251,6 +250,8 @@ function AppContent({ token, setToken }) {
     return () => {
       connection.off("ReceiveMessage");
       connection.off("UnreadIncrement");
+      connection.off("UserOnline");
+      connection.off("UserOffline");
       connection.off("MessageDeleted");
       connection.off("NewRoomAdded");
       connection.off("RoomDeleted");
@@ -295,7 +296,6 @@ function AppContent({ token, setToken }) {
     }));
 
     if (connectionRef.current && isConnected) {
-      console.log("Joining room:", roomId);
       connectionRef.current.invoke("JoinRoom", roomId).catch(console.error);
     }
   }, [isConnected]);
@@ -307,6 +307,7 @@ function AppContent({ token, setToken }) {
         <Sidebar
           channels={channels}
           unreadCounts={unreadCounts}
+          onlineUsers={onlineUsers}
           user={user}
           onLogout={handleLogout}
           onCreateChannel={() => setShowCreateModal(true)}

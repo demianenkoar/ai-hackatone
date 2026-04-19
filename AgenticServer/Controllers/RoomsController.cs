@@ -36,14 +36,23 @@ namespace AgenticServer.Controllers
 
             var rooms = await _context.Rooms
                 .Where(r => r.IsPublic || r.Members.Any(m => m.UserId == userId))
-                .OrderBy(r => r.Name)
                 .Select(r => new
                 {
                     r.Id,
                     r.Name,
                     r.IsPublic,
                     r.IsPrivate,
-                    r.OwnerId
+                    r.OwnerId,
+                    isDirect = r.OwnerId == null && !r.IsPublic,
+                    lastMessage = _context.Messages
+                        .Where(m => m.RoomId == r.Id)
+                        .OrderByDescending(m => m.Timestamp)
+                        .Select(m => new
+                        {
+                            content = m.Content,
+                            timestamp = m.Timestamp
+                        })
+                        .FirstOrDefault()
                 })
                 .ToListAsync();
 

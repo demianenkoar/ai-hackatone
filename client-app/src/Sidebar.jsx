@@ -7,6 +7,7 @@ const API_BASE = "http://localhost:58097";
 export default function Sidebar({
   channels,
   unreadCounts,
+  onlineUsers,
   user,
   onLogout,
   onCreateChannel
@@ -17,9 +18,13 @@ export default function Sidebar({
 
   const publicChannels = channels.filter(c => c.isPublic);
 
-  const contacts = channels.filter(
-    c => c.isDirect === true || (!c.isPublic && c.ownerId === null)
-  );
+  const contacts = channels
+    .filter(c => c.isDirect === true || (!c.isPublic && c.ownerId === null))
+    .sort((a, b) => {
+      const ta = a.lastMessage?.timestamp || 0;
+      const tb = b.lastMessage?.timestamp || 0;
+      return new Date(tb) - new Date(ta);
+    });
 
   const privateGroups = channels.filter(
     c => !c.isPublic && c.ownerId !== null && !c.isDirect
@@ -152,6 +157,9 @@ export default function Sidebar({
           key={c.id}
           channel={c}
           unreadCount={unreadCounts?.[c.id] || 0}
+          preview={c.lastMessage?.content}
+          timestamp={c.lastMessage?.timestamp}
+          isOnline={onlineUsers?.[c.userId]}
         />
       ))}
 
