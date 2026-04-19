@@ -41,16 +41,26 @@ namespace AgenticServer.Controllers
                 .Select(r => new
                 {
                     id = r.Id,
+
                     name = r.OwnerId == null && !r.IsPublic
                         ? r.Members
                             .Where(m => m.UserId != userId)
                             .Select(m => m.User.Username)
                             .FirstOrDefault()
                         : r.Name,
+
+                    userId = r.OwnerId == null && !r.IsPublic
+                        ? r.Members
+                            .Where(m => m.UserId != userId)
+                            .Select(m => m.UserId)
+                            .FirstOrDefault()
+                        : (Guid?)null,
+
                     isPublic = r.IsPublic,
                     isPrivate = r.IsPrivate,
                     ownerId = r.OwnerId,
                     isDirect = r.OwnerId == null && !r.IsPublic,
+
                     lastMessage = _context.Messages
                         .Where(m => m.RoomId == r.Id)
                         .OrderByDescending(m => m.Timestamp)
