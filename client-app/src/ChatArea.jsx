@@ -417,7 +417,12 @@ export default function ChatArea({
             <Message
               key={msg.id}
               msg={msg}
-              onReply={() => setReplyTo(msg)}
+              onReply={(m) => {
+                setReplyTo(m);
+                setTimeout(() => {
+                  document.querySelector("input[placeholder='Type a message']")?.focus();
+                }, 50);
+              }}
             />
           ))}
 

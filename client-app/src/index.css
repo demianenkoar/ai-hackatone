@@ -19,3 +19,20 @@
 .channel-active {
   border-left: 4px solid #6264a7;
 }
+
+.message-highlight {
+  animation: messageFlash 2s ease;
+}
+
+@keyframes messageFlash {
+  0% {
+    background-color: rgba(99,102,241,0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.reply-preview-bar {
+  border-radius: 6px;
+}

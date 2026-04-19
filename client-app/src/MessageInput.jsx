@@ -80,16 +80,19 @@ export default function MessageInput({
   return (
     <>
       {replyTo && (
-        <div className="border-l-4 border-[#6264a7] bg-gray-50 px-3 py-2 text-sm mb-2">
-          <div className="text-xs text-gray-500">
-            Replying to {replyTo.senderName}
+        <div className="reply-preview-bar border-l-4 border-[#6264a7] bg-gray-50 px-3 py-2 text-sm mb-2 flex justify-between items-start">
+          <div>
+            <div className="text-xs text-gray-500">
+              Replying to {replyTo.senderName}
+            </div>
+            <div className="truncate">{replyTo.content}</div>
           </div>
-          <div className="truncate">{replyTo.content}</div>
+
           <button
             onClick={clearReply}
-            className="text-xs text-red-500 mt-1"
+            className="text-xs text-gray-500 hover:text-red-500 ml-3"
           >
-            Cancel
+            ✕
           </button>
         </div>
       )}

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 function formatTimestamp(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -38,7 +40,22 @@ function isImageUrl(url) {
   );
 }
 
+function scrollToMessage(messageId) {
+  const el = document.getElementById(`msg-${messageId}`);
+  if (!el) return;
+
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  el.classList.add("message-highlight");
+
+  setTimeout(() => {
+    el.classList.remove("message-highlight");
+  }, 2000);
+}
+
 export default function Message({ msg, onReply }) {
+  const [hovered, setHovered] = useState(false);
+
   const time = formatTimestamp(msg.timestamp);
   const currentUserId = getCurrentUserId();
 
@@ -53,8 +70,10 @@ export default function Message({ msg, onReply }) {
 
   return (
     <div
-      onDoubleClick={onReply}
-      className="flex flex-col"
+      id={`msg-${msg.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="flex flex-col relative transition-all"
       style={{
         alignSelf: isMine ? "flex-end" : "flex-start",
         maxWidth: "60%"
@@ -69,7 +88,11 @@ export default function Message({ msg, onReply }) {
       <div
         className="px-4 py-2 text-sm"
         style={{
-          backgroundColor: isMine ? "#e5e5f1" : "#ffffff",
+          backgroundColor: hovered
+            ? "#f4f4fb"
+            : isMine
+            ? "#e5e5f1"
+            : "#ffffff",
           border: isMine ? "none" : "1px solid #e1e1e1",
           borderRadius: "10px",
           borderBottomRightRadius: isMine ? "0px" : "10px",
@@ -77,8 +100,21 @@ export default function Message({ msg, onReply }) {
           color: "#1f2937"
         }}
       >
+        {hovered && (
+          <button
+            onClick={() => onReply(msg)}
+            className="absolute right-1 top-1 text-gray-400 hover:text-gray-700 text-sm opacity-70 hover:opacity-100 transition-opacity"
+            title="Reply"
+          >
+            ↩
+          </button>
+        )}
+
         {msg.replyTo && (
-          <div className="border-l-4 border-gray-300 pl-2 mb-1 text-xs text-gray-600">
+          <div
+            onClick={() => scrollToMessage(msg.replyTo.id)}
+            className="border-l-4 border-gray-300 pl-2 mb-1 text-xs text-gray-600 cursor-pointer hover:bg-gray-100 transition"
+          >
             <div className="font-semibold">{msg.replyTo.senderName}</div>
             <div className="truncate">{msg.replyTo.content}</div>
           </div>
