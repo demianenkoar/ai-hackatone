@@ -55,6 +55,9 @@ export default function ChatArea({
 
   const [replyTo, setReplyTo] = useState(null);
 
+  const [activeTab, setActiveTab] = useState("chat");
+  const [files, setFiles] = useState([]);
+
   const containerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -82,6 +85,30 @@ export default function ChatArea({
     channel?.type === "private" ||
     channel?.privacy === 1 ||
     channel?.isPublic === false;
+
+  async function fetchFiles() {
+    const token = localStorage.getItem("token");
+    if (!channelId) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/messages/${channelId}/files`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setFiles(data);
+    } catch (err) {
+      console.error("Failed to fetch files", err);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "files") {
+      fetchFiles();
+    }
+  }, [activeTab, channelId]);
 
   useEffect(() => {
     if (!channelId) return;
@@ -389,7 +416,21 @@ export default function ChatArea({
       <div className="flex-1 flex flex-col">
 
         <div className="teams-header p-3 font-semibold flex justify-between items-center">
-          <span>Chat</span>
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={() => setActiveTab("chat")}
+              className={`text-sm ${activeTab === "chat" ? "font-bold underline" : ""}`}
+            >
+              Chat
+            </button>
+
+            <button
+              onClick={() => setActiveTab("files")}
+              className={`text-sm ${activeTab === "files" ? "font-bold underline" : ""}`}
+            >
+              Files
+            </button>
+          </div>
 
           {channel?.ownerId === currentUserId && (
             <button
@@ -408,6 +449,7 @@ export default function ChatArea({
           </button>
         </div>
 
+        {activeTab === "chat" && (
         <div
           ref={containerRef}
           onScroll={handleScroll}
@@ -428,6 +470,45 @@ export default function ChatArea({
 
           <div ref={messagesEndRef} />
         </div>
+        )}
+
+        {activeTab === "files" && (
+          <div className="flex-1 overflow-y-auto p-6 bg-[#f3f2f1]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+              {files.map(file => (
+                <div
+                  key={file.id}
+                  className="border bg-white p-3 rounded shadow-sm"
+                >
+                  <div className="text-sm font-medium truncate mb-1">
+                    {file.fileName}
+                  </div>
+
+                  <div className="text-xs text-gray-500 mb-2">
+                    {file.senderName}
+                  </div>
+
+                  <a
+                    href={`http://localhost:58097${file.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 text-xs underline"
+                  >
+                    Download
+                  </a>
+                </div>
+              ))}
+
+              {files.length === 0 && (
+                <div className="text-gray-500 text-sm">
+                  No files shared in this room yet.
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
 
         {typingMessage && (
           <div className="text-sm text-gray-500 px-4 pb-1">
@@ -435,6 +516,7 @@ export default function ChatArea({
           </div>
         )}
 
+        {activeTab === "chat" && (
         <MessageInput
           text={text}
           setText={setText}
@@ -445,6 +527,7 @@ export default function ChatArea({
           replyTo={replyTo}
           clearReply={() => setReplyTo(null)}
         />
+        )}
 
       </div>
 

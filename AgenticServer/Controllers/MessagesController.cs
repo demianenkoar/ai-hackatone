@@ -70,6 +70,29 @@ namespace AgenticServer.Controllers
             return Ok(messages);
         }
 
+        [HttpGet("{roomId}/files")]
+        public async Task<IActionResult> GetRoomFiles(Guid roomId)
+        {
+            if (roomId == Guid.Empty)
+                return BadRequest("Invalid roomId");
+
+            var files = await _context.Messages
+                .Where(m => m.RoomId == roomId && m.Content.StartsWith("/uploads/"))
+                .Include(m => m.Sender)
+                .OrderByDescending(m => m.Timestamp)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    url = m.Content,
+                    senderName = m.Sender != null ? m.Sender.Username : "Unknown",
+                    timestamp = m.Timestamp,
+                    fileName = m.Content.Substring(m.Content.LastIndexOf('_') + 1)
+                })
+                .ToListAsync();
+
+            return Ok(files);
+        }
+
         [HttpPost]
         public async Task<IActionResult> PostMessage([FromBody] Message input)
         {
