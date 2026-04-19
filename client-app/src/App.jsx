@@ -160,6 +160,16 @@ function AppContent({ token, setToken }) {
       }));
     });
 
+    connection.on("MessageDeleted", ({ id }) => {
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === id
+            ? { ...m, content: "", isDeleted: true }
+            : m
+        )
+      );
+    });
+
     connection.on("NewRoomAdded", (room) => {
       console.log("SignalR: NewRoomAdded", room);
 
@@ -217,6 +227,7 @@ function AppContent({ token, setToken }) {
     return () => {
       connection.off("ReceiveMessage");
       connection.off("UnreadIncrement");
+      connection.off("MessageDeleted");
       connection.off("NewRoomAdded");
       connection.off("KickedFromRoom");
       connection.stop();

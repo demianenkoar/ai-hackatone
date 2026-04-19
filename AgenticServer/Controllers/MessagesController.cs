@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 
 namespace AgenticServer.Controllers
 {
@@ -55,6 +56,7 @@ namespace AgenticServer.Controllers
                     senderName = m.Sender != null ? m.Sender.Username : "Unknown",
                     content = m.Content,
                     timestamp = m.Timestamp,
+                    isDeleted = m.IsDeleted,
                     replyToMessageId = m.ReplyToMessageId,
                     replyTo = m.ReplyToMessage == null ? null : new
                     {
@@ -100,6 +102,7 @@ namespace AgenticServer.Controllers
                     senderName = m.Sender != null ? m.Sender.Username : "Unknown",
                     content = m.Content,
                     timestamp = m.Timestamp,
+                    isDeleted = m.IsDeleted,
                     replyToMessageId = m.ReplyToMessageId,
                     replyTo = m.ReplyToMessage == null ? null : new
                     {
@@ -113,6 +116,38 @@ namespace AgenticServer.Controllers
             results.Reverse();
 
             return Ok(results);
+        }
+
+        [Authorize]
+        [HttpDelete("{messageId}")]
+        public async Task<IActionResult> DeleteMessage(Guid messageId)
+        {
+            var claimId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(claimId))
+                return Unauthorized();
+
+            var userId = Guid.Parse(claimId);
+
+            var message = await _context.Messages.FindAsync(messageId);
+
+            if (message == null)
+                return NotFound();
+
+            if (message.SenderId != userId)
+                return Forbid();
+
+            message.IsDeleted = true;
+
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients
+                .Group(message.RoomId.ToString())
+                .SendAsync("MessageDeleted", new
+                {
+                    id = message.Id
+                });
+
+            return NoContent();
         }
 
         [HttpGet("{roomId}/files")]

@@ -1,5 +1,16 @@
 import { useState } from "react";
 
+async function deleteMessage(messageId) {
+  const token = localStorage.getItem("token");
+
+  await fetch(`http://localhost:58097/api/messages/${messageId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+}
+
 function formatTimestamp(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -83,6 +94,7 @@ export default function Message({ msg, previousMessage, onReply }) {
   }
 
   const content = msg.content || "";
+  const isDeleted = msg.isDeleted === true;
   const isImage = isImageUrl(content);
   const isFileLink = content.startsWith("/uploads/");
 
@@ -121,14 +133,26 @@ export default function Message({ msg, previousMessage, onReply }) {
           marginTop: showHeader ? "0px" : "2px"
         }}
       >
-        {hovered && (
-          <button
-            onClick={() => onReply(msg)}
-            className="absolute right-1 top-1 text-gray-400 hover:text-gray-700 text-sm opacity-70 hover:opacity-100 transition-opacity"
-            title="Reply"
-          >
-            ↩
-          </button>
+        {hovered && isMine && !msg.isDeleted && (
+          <div className="absolute right-1 top-1 flex gap-1">
+
+            <button
+              onClick={() => onReply(msg)}
+              className="text-gray-400 hover:text-gray-700 text-sm"
+              title="Reply"
+            >
+              ↩
+            </button>
+
+            <button
+              onClick={() => deleteMessage(msg.id)}
+              className="text-red-400 hover:text-red-600 text-sm"
+              title="Delete"
+            >
+              🗑
+            </button>
+
+          </div>
         )}
 
         {msg.replyTo && (
@@ -141,8 +165,12 @@ export default function Message({ msg, previousMessage, onReply }) {
           </div>
         )}
 
-        {!isFileLink && (
-          <div>{content}</div>
+        {isDeleted ? (
+          <div className="italic text-gray-400">
+            Message Removed
+          </div>
+        ) : (
+          !isFileLink && <div>{content}</div>
         )}
 
         {isImage && (

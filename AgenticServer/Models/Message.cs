@@ -21,6 +21,8 @@ namespace AgenticServer.Models
         public DateTime Timestamp { get; set; }
         public DateTime? EditedAt { get; set; }
 
+        public bool IsDeleted { get; set; } = false;
+
         public ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
     }
 }
