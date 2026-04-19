@@ -140,6 +140,18 @@ function AppContent({ token, setToken }) {
       });
     });
 
+    connection.on("NewRoomAdded", (room) => {
+      console.log("SignalR: NewRoomAdded", room);
+
+      if (!room) return;
+
+      setChannels((prev) => {
+        const exists = prev.some((r) => String(r.id) === String(room.id));
+        if (exists) return prev;
+        return [...prev, room];
+      });
+    });
+
     connection.onreconnecting((err) => {
       console.log("Reconnecting...", err);
       setIsConnected(false);
@@ -174,6 +186,7 @@ function AppContent({ token, setToken }) {
 
     return () => {
       connection.off("ReceiveMessage");
+      connection.off("NewRoomAdded");
       connection.stop();
     };
   }, [token]);
