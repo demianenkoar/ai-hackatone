@@ -133,7 +133,7 @@ export default function Message({ msg, previousMessage, onReply }) {
           marginTop: showHeader ? "0px" : "2px"
         }}
       >
-        {hovered && isMine && !msg.isDeleted && (
+        {hovered && !msg.isDeleted && (
           <div className="absolute right-1 top-1 flex gap-1">
 
             <button
@@ -144,13 +144,15 @@ export default function Message({ msg, previousMessage, onReply }) {
               ↩
             </button>
 
-            <button
-              onClick={() => deleteMessage(msg.id)}
-              className="text-red-400 hover:text-red-600 text-sm"
-              title="Delete"
-            >
-              🗑
-            </button>
+            {isMine && (
+              <button
+                onClick={() => deleteMessage(msg.id)}
+                className="text-red-400 hover:text-red-600 text-sm"
+                title="Delete"
+              >
+                🗑
+              </button>
+            )}
 
           </div>
         )}
