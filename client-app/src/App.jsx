@@ -97,11 +97,19 @@ function AppContent({ token, setToken }) {
 
     if (!res) return;
 
+    const room = await res.json();
+
     setShowCreateModal(false);
     setNewRoomName("");
     setIsPublic(true);
 
-    loadChannels();
+    setChannels(prev => {
+      const exists = prev.some(r => String(r.id) === String(room.id));
+      if (exists) return prev;
+      return [...prev, room];
+    });
+
+    window.location.href = `/channel/${room.id}`;
   };
 
   const inviteUser = async (roomId, userId) => {
