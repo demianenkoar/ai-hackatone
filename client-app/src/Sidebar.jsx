@@ -44,11 +44,11 @@ export default function Sidebar({
   }
 
   return (
-    <div className="w-64 bg-[#f3f2f1] border-r p-4 flex flex-col">
+    <div className="w-64 bg-white border-r border-slate-200 p-4 flex flex-col">
 
       <RoomControls onCreateChannel={onCreateChannel} />
 
-      <div className="text-xs text-slate-500 mb-3">
+      <div className="text-xs text-slate-500 mb-4 px-2 py-1 bg-slate-100 rounded-md">
         Logged in as: {user.username}
       </div>
 

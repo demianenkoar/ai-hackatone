@@ -12,8 +12,9 @@
 }
 
 .teams-header {
-  background-color: #6264a7;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
 }
 
 .channel-active {
@@ -35,4 +36,10 @@
 
 .reply-preview-bar {
   border-radius: 6px;
+}
+
+* {
+  transition: background-color 120ms ease,
+              box-shadow 120ms ease,
+              border-color 120ms ease;
 }

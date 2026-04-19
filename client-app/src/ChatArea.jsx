@@ -529,7 +529,7 @@ export default function ChatArea({
               {files.map(file => (
                 <div
                   key={file.id}
-                  className="border bg-white p-3 rounded shadow-sm"
+                  className="border border-slate-200 bg-white p-3 rounded-xl shadow-sm hover:shadow-md transition"
                 >
                   <div className="text-sm font-medium truncate mb-1">
                     {file.fileName}

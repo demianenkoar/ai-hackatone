@@ -97,7 +97,7 @@ export default function MessageInput({
         </div>
       )}
 
-      <div className="border-t bg-white p-3 flex gap-2 relative">
+      <div className="border-t border-slate-200 bg-white p-3 flex gap-2 relative">
         <button
           type="button"
           onClick={() => setShowPicker((v) => !v)}
@@ -134,13 +134,13 @@ export default function MessageInput({
           value={text}
           onChange={handleTextChange}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          className="flex-1 border rounded px-3 py-2"
+          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           placeholder="Type a message"
         />
 
         <button
           onClick={sendMessage}
-          className="text-white px-4 rounded"
+          className="text-white px-4 rounded-lg shadow-sm hover:shadow transition"
           style={{ backgroundColor: "#6264a7" }}
         >
           Send

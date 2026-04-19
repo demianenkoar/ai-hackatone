@@ -265,8 +265,8 @@ function AppContent({ token, setToken }) {
   }, [isConnected]);
 
   return (
-    <div className="w-full h-screen flex justify-center bg-gray-100">
-      <div className="w-full max-w-[1280px] h-screen flex overflow-hidden bg-white shadow-lg border border-gray-300 rounded-lg">
+    <div className="w-full h-screen flex justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+      <div className="w-full max-w-[1280px] h-[95vh] my-auto flex overflow-hidden bg-white shadow-2xl border border-slate-200 rounded-2xl backdrop-blur">
 
         <Sidebar
           channels={channels}

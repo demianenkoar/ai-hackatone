@@ -89,14 +89,14 @@ export default function Message({ msg, onReply }) {
         className="px-4 py-2 text-sm"
         style={{
           backgroundColor: hovered
-            ? "#f4f4fb"
+            ? "#eef2ff"
             : isMine
-            ? "#e5e5f1"
-            : "#ffffff",
+            ? "#eef2ff"
+            : "#f8fafc",
           border: isMine ? "none" : "1px solid #e1e1e1",
-          borderRadius: "10px",
-          borderBottomRightRadius: isMine ? "0px" : "10px",
-          borderBottomLeftRadius: isMine ? "10px" : "0px",
+          borderRadius: "14px",
+          borderBottomRightRadius: isMine ? "0px" : "14px",
+          borderBottomLeftRadius: isMine ? "14px" : "0px",
           color: "#1f2937"
         }}
       >
