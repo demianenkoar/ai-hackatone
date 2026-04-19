@@ -245,8 +245,11 @@ namespace AgenticServer.Controllers
                 .Select(m => m.UserId)
                 .ToListAsync();
 
-            await _hub.Clients.Group(roomId.ToString())
-                .SendAsync("RoomDeleted", roomId);
+            foreach (var memberId in memberIds)
+            {
+                await _hub.Clients.User(memberId.ToString())
+                    .SendAsync("RoomDeleted", roomId);
+            }
 
             var messages = _context.Messages.Where(m => m.RoomId == roomId);
             _context.Messages.RemoveRange(messages);
