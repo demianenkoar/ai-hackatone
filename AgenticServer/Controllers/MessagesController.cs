@@ -89,6 +89,7 @@ namespace AgenticServer.Controllers
                 .ThenInclude(r => r.Sender)
                 .Where(m =>
                     m.RoomId == roomId &&
+                    !m.IsDeleted &&
                     m.Content.ToLower().Contains(query) &&
                     !m.Content.StartsWith("/uploads/")
                 )

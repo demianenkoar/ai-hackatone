@@ -155,7 +155,7 @@ export default function Message({ msg, previousMessage, onReply }) {
           </div>
         )}
 
-        {msg.replyTo && (
+        {msg.replyTo && !isDeleted && (
           <div
             onClick={() => scrollToMessage(msg.replyTo.id)}
             className="border-l-4 border-gray-300 pl-2 mb-1 text-xs text-gray-600 cursor-pointer hover:bg-gray-100 transition"
@@ -167,13 +167,13 @@ export default function Message({ msg, previousMessage, onReply }) {
 
         {isDeleted ? (
           <div className="italic text-gray-400">
-            Message Removed
+            Message removed by user
           </div>
         ) : (
           !isFileLink && <div>{content}</div>
         )}
 
-        {isImage && (
+        {isImage && !isDeleted && (
           <div className="mt-1">
             <img
               src={`http://localhost:58097${content}`}
@@ -186,7 +186,7 @@ export default function Message({ msg, previousMessage, onReply }) {
           </div>
         )}
 
-        {isFileLink && !isImage && (
+        {isFileLink && !isImage && !isDeleted && (
           <div className="mt-1">
             <a
               href={`http://localhost:58097${content}`}
