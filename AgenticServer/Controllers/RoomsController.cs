@@ -221,6 +221,14 @@ namespace AgenticServer.Controllers
             if (room.OwnerId != userId)
                 return Forbid();
 
+            var memberIds = await _context.RoomMembers
+                .Where(m => m.RoomId == roomId)
+                .Select(m => m.UserId)
+                .ToListAsync();
+
+            await _hub.Clients.Group(roomId.ToString())
+                .SendAsync("RoomDeleted", roomId);
+
             var messages = _context.Messages.Where(m => m.RoomId == roomId);
             _context.Messages.RemoveRange(messages);
 

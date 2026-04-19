@@ -182,6 +182,22 @@ function AppContent({ token, setToken }) {
       });
     });
 
+    connection.on("RoomDeleted", (roomId) => {
+      console.log("Room deleted:", roomId);
+
+      setChannels(prev =>
+        prev.filter(r => String(r.id) !== String(roomId))
+      );
+
+      const path = window.location.pathname;
+      const parts = path.split("/");
+      const currentRoom = parts[2];
+
+      if (String(currentRoom) === String(roomId)) {
+        window.location.href = "/";
+      }
+    });
+
     connection.on("KickedFromRoom", (roomId) => {
       const path = window.location.pathname;
       const parts = path.split("/");
@@ -229,6 +245,7 @@ function AppContent({ token, setToken }) {
       connection.off("UnreadIncrement");
       connection.off("MessageDeleted");
       connection.off("NewRoomAdded");
+      connection.off("RoomDeleted");
       connection.off("KickedFromRoom");
       connection.stop();
     };
