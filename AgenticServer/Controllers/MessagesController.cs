@@ -35,6 +35,8 @@ namespace AgenticServer.Controllers
 
             var query = _context.Messages
                 .Include(m => m.Sender)
+                .Include(m => m.ReplyToMessage)
+                .ThenInclude(r => r.Sender)
                 .Where(m => m.RoomId == roomId);
 
             if (before != null)
@@ -52,7 +54,14 @@ namespace AgenticServer.Controllers
                     senderId = m.SenderId,
                     senderName = m.Sender != null ? m.Sender.Username : "Unknown",
                     content = m.Content,
-                    timestamp = m.Timestamp
+                    timestamp = m.Timestamp,
+                    replyToMessageId = m.ReplyToMessageId,
+                    replyTo = m.ReplyToMessage == null ? null : new
+                    {
+                        id = m.ReplyToMessage.Id,
+                        senderName = m.ReplyToMessage.Sender != null ? m.ReplyToMessage.Sender.Username : "Unknown",
+                        content = m.ReplyToMessage.Content
+                    }
                 })
                 .ToListAsync();
 

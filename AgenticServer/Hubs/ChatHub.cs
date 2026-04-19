@@ -50,10 +50,15 @@ namespace AgenticServer.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
         }
 
-        public async Task SendMessage(string roomId, string content)
+        public async Task SendMessage(string roomId, string content, string? replyToMessageId)
         {
             var senderId = ResolveUserId();
             var parsedRoomId = Guid.Parse(roomId);
+
+            Guid? replyGuid = null;
+
+            if (!string.IsNullOrEmpty(replyToMessageId))
+                replyGuid = Guid.Parse(replyToMessageId);
 
             var message = new Message
             {
@@ -61,6 +66,7 @@ namespace AgenticServer.Hubs
                 RoomId = parsedRoomId,
                 SenderId = senderId,
                 Content = content,
+                ReplyToMessageId = replyGuid,
                 Timestamp = DateTime.UtcNow
             };
 
@@ -69,12 +75,33 @@ namespace AgenticServer.Hubs
 
             var sender = await _db.Users.FindAsync(senderId);
 
+            object? replyTo = null;
+
+            if (replyGuid != null)
+            {
+                var replyMsg = await _db.Messages
+                    .Include(m => m.Sender)
+                    .FirstOrDefaultAsync(m => m.Id == replyGuid);
+
+                if (replyMsg != null)
+                {
+                    replyTo = new
+                    {
+                        id = replyMsg.Id,
+                        senderName = replyMsg.Sender != null ? replyMsg.Sender.Username : "Unknown",
+                        content = replyMsg.Content
+                    };
+                }
+            }
+
             var dto = new
             {
                 id = message.Id,
                 roomId = message.RoomId,
                 senderId = message.SenderId,
                 senderName = sender?.Username ?? "Unknown",
+                replyToMessageId = message.ReplyToMessageId,
+                replyTo = replyTo,
                 content = message.Content,
                 timestamp = message.Timestamp
             };

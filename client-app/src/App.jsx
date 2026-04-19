@@ -223,7 +223,7 @@ function AppContent({ token, setToken }) {
     };
   }, [token]);
 
-  const sendMessage = async () => {
+  const sendMessage = async (replyTo = null) => {
     if (!text.trim()) return;
 
     const path = window.location.pathname;
@@ -233,7 +233,12 @@ function AppContent({ token, setToken }) {
     if (!roomId || !connectionRef.current || !isConnected) return;
 
     try {
-      await connectionRef.current.invoke("SendMessage", roomId, text);
+      await connectionRef.current.invoke(
+        "SendMessage",
+        roomId,
+        text,
+        replyTo?.id || null
+      );
       setText("");
     } catch (err) {
       console.error("Send failed:", err);

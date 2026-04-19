@@ -9,7 +9,9 @@ export default function MessageInput({
   sendMessage,
   roomId,
   username,
-  connectionRef
+  connectionRef,
+  replyTo,
+  clearReply
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const fileInputRef = useRef(null);
@@ -76,54 +78,71 @@ export default function MessageInput({
   }
 
   return (
-    <div className="border-t bg-white p-3 flex gap-2 relative">
-      <button
-        type="button"
-        onClick={() => setShowPicker((v) => !v)}
-        className="px-2 text-lg"
-      >
-        🙂
-      </button>
-
-      {showPicker && (
-        <div
-          className="absolute bottom-14 left-2 z-50 shadow-lg"
-        >
-          <EmojiPicker onEmojiClick={handleEmojiClick} />
+    <>
+      {replyTo && (
+        <div className="border-l-4 border-[#6264a7] bg-gray-50 px-3 py-2 text-sm mb-2">
+          <div className="text-xs text-gray-500">
+            Replying to {replyTo.senderName}
+          </div>
+          <div className="truncate">{replyTo.content}</div>
+          <button
+            onClick={clearReply}
+            className="text-xs text-red-500 mt-1"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="px-2 text-lg"
-        title="Attach file"
-      >
-        📎
-      </button>
+      <div className="border-t bg-white p-3 flex gap-2 relative">
+        <button
+          type="button"
+          onClick={() => setShowPicker((v) => !v)}
+          className="px-2 text-lg"
+        >
+          🙂
+        </button>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        style={{ display: "none" }}
-      />
+        {showPicker && (
+          <div
+            className="absolute bottom-14 left-2 z-50 shadow-lg"
+          >
+            <EmojiPicker onEmojiClick={handleEmojiClick} />
+          </div>
+        )}
 
-      <input
-        value={text}
-        onChange={handleTextChange}
-        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        className="flex-1 border rounded px-3 py-2"
-        placeholder="Type a message"
-      />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="px-2 text-lg"
+          title="Attach file"
+        >
+          📎
+        </button>
 
-      <button
-        onClick={sendMessage}
-        className="text-white px-4 rounded"
-        style={{ backgroundColor: "#6264a7" }}
-      >
-        Send
-      </button>
-    </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+
+        <input
+          value={text}
+          onChange={handleTextChange}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          className="flex-1 border rounded px-3 py-2"
+          placeholder="Type a message"
+        />
+
+        <button
+          onClick={sendMessage}
+          className="text-white px-4 rounded"
+          style={{ backgroundColor: "#6264a7" }}
+        >
+          Send
+        </button>
+      </div>
+    </>
   );
 }

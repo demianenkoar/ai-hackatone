@@ -38,7 +38,7 @@ function isImageUrl(url) {
   );
 }
 
-export default function Message({ msg }) {
+export default function Message({ msg, onReply }) {
   const time = formatTimestamp(msg.timestamp);
   const currentUserId = getCurrentUserId();
 
@@ -53,6 +53,7 @@ export default function Message({ msg }) {
 
   return (
     <div
+      onDoubleClick={onReply}
       className="flex flex-col"
       style={{
         alignSelf: isMine ? "flex-end" : "flex-start",
@@ -76,6 +77,13 @@ export default function Message({ msg }) {
           color: "#1f2937"
         }}
       >
+        {msg.replyTo && (
+          <div className="border-l-4 border-gray-300 pl-2 mb-1 text-xs text-gray-600">
+            <div className="font-semibold">{msg.replyTo.senderName}</div>
+            <div className="truncate">{msg.replyTo.content}</div>
+          </div>
+        )}
+
         {!isFileLink && (
           <div>{content}</div>
         )}

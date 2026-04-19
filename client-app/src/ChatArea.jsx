@@ -53,6 +53,8 @@ export default function ChatArea({
 
   const safeMessages = messages || [];
 
+  const [replyTo, setReplyTo] = useState(null);
+
   const containerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -412,7 +414,11 @@ export default function ChatArea({
           className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]"
         >
           {safeMessages.map((msg) => (
-            <Message key={msg.id} msg={msg} />
+            <Message
+              key={msg.id}
+              msg={msg}
+              onReply={() => setReplyTo(msg)}
+            />
           ))}
 
           <div ref={messagesEndRef} />
@@ -427,10 +433,12 @@ export default function ChatArea({
         <MessageInput
           text={text}
           setText={setText}
-          sendMessage={sendMessage}
+          sendMessage={() => sendMessage(replyTo)}
           roomId={channelId}
           username={username}
           connectionRef={connectionRef}
+          replyTo={replyTo}
+          clearReply={() => setReplyTo(null)}
         />
 
       </div>
