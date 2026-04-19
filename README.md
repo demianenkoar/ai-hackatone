@@ -64,7 +64,7 @@ cd ai-hackatone
 
 3. Start the full application stack
 
-docker compose up --build
+docker-compose up --build
 
 The first startup may take a few minutes because Docker must build the images.
 
