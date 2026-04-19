@@ -3,12 +3,35 @@ import EmojiPicker from "emoji-picker-react";
 
 const API_BASE = "http://localhost:58097";
 
-export default function MessageInput({ text, setText, sendMessage }) {
+export default function MessageInput({
+  text,
+  setText,
+  sendMessage,
+  roomId,
+  username,
+  connectionRef
+}) {
   const [showPicker, setShowPicker] = useState(false);
   const fileInputRef = useRef(null);
+  const lastTypingSentRef = useRef(0);
 
   function handleEmojiClick(emojiData) {
     setText((prev) => prev + emojiData.emoji);
+  }
+
+  function handleTextChange(e) {
+    const value = e.target.value;
+    setText(value);
+
+    const now = Date.now();
+
+    if (now - lastTypingSentRef.current > 2500) {
+      const connection = connectionRef?.current;
+      if (connection && roomId && username) {
+        connection.invoke("SendTyping", roomId, username).catch(console.error);
+        lastTypingSentRef.current = now;
+      }
+    }
   }
 
   async function handleFileChange(e) {
@@ -88,7 +111,7 @@ export default function MessageInput({ text, setText, sendMessage }) {
 
       <input
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleTextChange}
         onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         className="flex-1 border rounded px-3 py-2"
         placeholder="Type a message"

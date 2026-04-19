@@ -6,6 +6,22 @@ import InviteMemberModal from "./InviteMemberModal";
 
 const API_BASE = "http://localhost:58097";
 
+function getCurrentUsername() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return "User";
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return (
+      payload.unique_name ||
+      payload.name ||
+      payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ||
+      "User"
+    );
+  } catch {
+    return "User";
+  }
+}
+
 export default function ChatArea({
   messages,
   setMessages,
@@ -18,6 +34,7 @@ export default function ChatArea({
 }) {
 
   const { channelId } = useParams();
+  const username = getCurrentUsername();
 
   const safeMessages = messages || [];
 
@@ -280,6 +297,9 @@ export default function ChatArea({
           text={text}
           setText={setText}
           sendMessage={sendMessage}
+          roomId={channelId}
+          username={username}
+          connectionRef={connectionRef}
         />
 
       </div>
