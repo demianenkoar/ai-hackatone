@@ -90,6 +90,8 @@ export default function ChatArea({
     channel?.privacy === 1 ||
     channel?.isPublic === false;
 
+  const isDirectChat = channel?.isDirect === true;
+
   async function searchMessages(query) {
     const token = localStorage.getItem("token");
     if (!query.trim()) {
@@ -587,7 +589,7 @@ export default function ChatArea({
               Members
             </div>
 
-            {isPrivateChannel && (
+            {isPrivateChannel && !isDirectChat && (
               <button
                 onClick={() => setShowInvite(true)}
                 className="w-full flex items-center justify-center gap-2 text-sm border rounded py-2"
@@ -656,7 +658,7 @@ export default function ChatArea({
         </div>
       )}
 
-      {showInvite && (
+      {showInvite && !isDirectChat && (
         <InviteMemberModal
           roomId={channelId}
           inviteUser={inviteUser}
