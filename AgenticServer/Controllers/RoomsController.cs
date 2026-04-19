@@ -126,8 +126,7 @@ namespace AgenticServer.Controllers
                 return BadRequest("Cannot create DM with yourself.");
 
             var existing = await _context.Rooms
-                .Where(r => !r.IsPublic)
-                .Where(r => r.Members.Count == 2)
+                .Where(r => !r.IsPublic && r.OwnerId == null)
                 .Where(r =>
                     r.Members.Any(m => m.UserId == currentUserId) &&
                     r.Members.Any(m => m.UserId == userId))

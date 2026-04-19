@@ -15,11 +15,15 @@ export default function Sidebar({
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
 
-  const publicChannels = channels.filter(c => !(c.isPrivate ?? !c.isPublic));
-  const privateChannels = channels.filter(c => (c.isPrivate ?? !c.isPublic));
+  const publicChannels = channels.filter(c => c.isPublic);
 
-  const contacts = privateChannels.filter(c => !c.ownerId);
-  const privateGroups = privateChannels.filter(c => c.ownerId);
+  const contacts = channels.filter(
+    c => !c.isPublic && c.ownerId === null
+  );
+
+  const privateGroups = channels.filter(
+    c => !c.isPublic && c.ownerId !== null
+  );
 
   async function searchUsers(query) {
     const token = localStorage.getItem("token");
