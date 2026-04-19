@@ -58,6 +58,10 @@ export default function ChatArea({
   const [activeTab, setActiveTab] = useState("chat");
   const [files, setFiles] = useState([]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const containerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -85,6 +89,33 @@ export default function ChatArea({
     channel?.type === "private" ||
     channel?.privacy === 1 ||
     channel?.isPublic === false;
+
+  async function searchMessages(query) {
+    const token = localStorage.getItem("token");
+    if (!query.trim()) {
+      setIsSearching(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/messages/${channelId}/search?q=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setSearchResults(data);
+      setIsSearching(true);
+    } catch (err) {
+      console.error("Search failed", err);
+    }
+  }
 
   async function fetchFiles() {
     const token = localStorage.getItem("token");
@@ -246,6 +277,10 @@ export default function ChatArea({
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+
+    setSearchQuery("");
+    setIsSearching(false);
+    setSearchResults([]);
 
     if (!channelId || !token) return;
 
@@ -416,20 +451,35 @@ export default function ChatArea({
       <div className="flex-1 flex flex-col">
 
         <div className="teams-header p-3 font-semibold flex justify-between items-center">
-          <div className="flex gap-4 items-center">
-            <button
-              onClick={() => setActiveTab("chat")}
-              className={`text-sm ${activeTab === "chat" ? "font-bold underline" : ""}`}
-            >
-              Chat
-            </button>
+          <div className="flex items-center gap-4">
 
-            <button
-              onClick={() => setActiveTab("files")}
-              className={`text-sm ${activeTab === "files" ? "font-bold underline" : ""}`}
-            >
-              Files
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setActiveTab("chat")}
+                className={`text-sm ${activeTab === "chat" ? "font-bold underline" : ""}`}
+              >
+                Chat
+              </button>
+
+              <button
+                onClick={() => setActiveTab("files")}
+                className={`text-sm ${activeTab === "files" ? "font-bold underline" : ""}`}
+              >
+                Files
+              </button>
+            </div>
+
+            <input
+              value={searchQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSearchQuery(v);
+                searchMessages(v);
+              }}
+              placeholder="Search messages..."
+              className="ml-4 text-sm px-2 py-1 rounded border text-black"
+            />
+
           </div>
 
           {channel?.ownerId === currentUserId && (
@@ -455,7 +505,7 @@ export default function ChatArea({
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f3f2f1]"
         >
-          {safeMessages.map((msg) => (
+          {(isSearching ? searchResults : safeMessages).map((msg) => (
             <Message
               key={msg.id}
               msg={msg}
