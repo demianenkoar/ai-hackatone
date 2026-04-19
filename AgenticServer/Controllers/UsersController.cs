@@ -43,7 +43,7 @@ namespace AgenticServer.Controllers
             return Ok(users);
         }
 
-        [HttpDelete("/api/account")]
+        [HttpDelete("delete")]
         public async Task<IActionResult> DeleteAccount()
         {
             var claimId = User.FindFirstValue(ClaimTypes.NameIdentifier);

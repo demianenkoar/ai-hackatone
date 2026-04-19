@@ -23,7 +23,7 @@ export default function Sidebar({
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch(`${API_BASE}/api/account`, {
+      const res = await fetch(`${API_BASE}/api/users/delete`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
