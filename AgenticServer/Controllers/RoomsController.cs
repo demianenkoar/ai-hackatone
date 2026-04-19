@@ -35,11 +35,18 @@ namespace AgenticServer.Controllers
             var userId = CurrentUserId();
 
             var rooms = await _context.Rooms
+                .Include(r => r.Members)
+                .ThenInclude(m => m.User)
                 .Where(r => r.IsPublic || r.Members.Any(m => m.UserId == userId))
                 .Select(r => new
                 {
                     id = r.Id,
-                    name = r.Name,
+                    name = r.OwnerId == null && !r.IsPublic
+                        ? r.Members
+                            .Where(m => m.UserId != userId)
+                            .Select(m => m.User.Username)
+                            .FirstOrDefault()
+                        : r.Name,
                     isPublic = r.IsPublic,
                     isPrivate = r.IsPrivate,
                     ownerId = r.OwnerId,

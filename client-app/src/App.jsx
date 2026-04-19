@@ -78,7 +78,7 @@ function AppContent({ token, setToken }) {
   };
 
   const loadChannels = async () => {
-    const res = await safeFetch(`${API_BASE}/api/channels`);
+    const res = await safeFetch(`${API_BASE}/api/rooms`);
     if (!res) return;
 
     const data = await res.json();
