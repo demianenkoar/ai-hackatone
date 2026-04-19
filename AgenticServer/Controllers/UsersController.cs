@@ -2,6 +2,7 @@ using AgenticServer.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace AgenticServer.Controllers
 {
@@ -40,6 +41,36 @@ namespace AgenticServer.Controllers
                 .ToListAsync();
 
             return Ok(users);
+        }
+
+        [HttpDelete("/api/account")]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var claimId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(claimId))
+                return Unauthorized();
+
+            var userId = Guid.Parse(claimId);
+
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null)
+                return NotFound();
+
+            var messages = _context.Messages.Where(m => m.SenderId == userId);
+            _context.Messages.RemoveRange(messages);
+
+            var memberships = _context.RoomMembers.Where(rm => rm.UserId == userId);
+            _context.RoomMembers.RemoveRange(memberships);
+
+            await _context.SaveChangesAsync();
+
+            _context.Users.Remove(user);
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }
