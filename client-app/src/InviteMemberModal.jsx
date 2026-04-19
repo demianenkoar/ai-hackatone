@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const API_BASE = "http://localhost:58097";
 
-export default function InviteMemberModal({ roomId, inviteUser, close }) {
+export default function InviteMemberModal({ roomId, inviteUser, onMemberAdded, close }) {
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -51,14 +51,22 @@ export default function InviteMemberModal({ roomId, inviteUser, close }) {
   async function handleInvite() {
     if (!selectedUserId) return;
 
-    await inviteUser(roomId, selectedUserId);
+    try {
+      await inviteUser(roomId, selectedUserId);
 
-    setQuery("");
-    setResults([]);
-    setSelectedUserId(null);
-    setShowDropdown(false);
+      if (onMemberAdded) {
+        await onMemberAdded();
+      }
 
-    close();
+      setQuery("");
+      setResults([]);
+      setSelectedUserId(null);
+      setShowDropdown(false);
+
+      close();
+    } catch (err) {
+      console.error("Invite failed:", err);
+    }
   }
 
   return (

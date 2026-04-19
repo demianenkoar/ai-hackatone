@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
@@ -48,6 +48,24 @@ export default function ChatArea({
 
   }, [channelId, setCurrentRoom]);
 
+  const fetchMembers = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!channelId || !token) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rooms/${channelId}/members`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setMembers(data);
+    } catch (err) {
+      console.error("Failed to fetch members", err);
+    }
+  }, [channelId]);
+
   useEffect(() => {
     const connection = connectionRef.current;
     if (!connection) return;
@@ -88,25 +106,10 @@ export default function ChatArea({
   }, [channelId]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!channelId || !token) return;
-
-    async function fetchMembers() {
-      const res = await fetch(`${API_BASE}/api/rooms/${channelId}/members`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-      setMembers(data);
-    }
-
     if (isPrivateChannel) {
       fetchMembers();
     }
-
-  }, [channelId, channel]);
+  }, [channelId, channel, isPrivateChannel, fetchMembers]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -132,7 +135,7 @@ export default function ChatArea({
     setMessages([]);
     fetchMessages();
 
-  }, [channelId]);
+  }, [channelId, setMessages]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -214,8 +217,6 @@ export default function ChatArea({
         console.error("Invite failed:", text);
         return;
       }
-
-      setShowInvite(false);
     } catch (err) {
       console.error("Invite request failed:", err);
     }
@@ -303,6 +304,7 @@ export default function ChatArea({
         <InviteMemberModal
           roomId={channelId}
           inviteUser={inviteUser}
+          onMemberAdded={fetchMembers}
           close={() => setShowInvite(false)}
         />
       )}
